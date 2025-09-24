@@ -1,222 +1,232 @@
 <!DOCTYPE html>
 <html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Coach Timer v3.2a (simple)</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Coach Timer v3.5 (Compact)</title>
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#10b981">
 <style>
-body{font-family:-apple-system,system-ui,sans-serif;margin:0;background:#fffbeb;color:#111827}
-header{background:#fff3;border-bottom:1px solid #ddd;padding:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
-.brand{background:#111827;color:#facc15;padding:4px 8px;border-radius:6px;font-weight:700}
-.btn{border:1px solid #ddd;background:#fff;padding:6px 9px;border-radius:6px;font-size:14px;cursor:pointer}
-.btn-green{background:#059669;color:#fff}
-.btn-red{background:#b91c1c;color:#fff}
-.list{margin:10px}
-.row{display:grid;grid-template-columns:24px 1fr 90px 200px 46px 46px;align-items:center;border-bottom:1px dashed #ddd;padding:6px 0;gap:6px}
-.num{text-align:right;font-size:12px;color:#666}
-.name-input{width:100%;padding:6px;border:1px solid #ddd;border-radius:6px}
-.time{font-family:monospace;font-size:13px;text-align:center}
-table{width:100%;border-collapse:collapse;margin:10px}
-th,td{border-bottom:1px dashed #ddd;padding:6px 8px;font-size:13px;text-align:left}
-.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 10px}
+:root{--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--line:#e5e7eb;--accent:#10b981;--danger:#ef4444;--ink:#111827}
+*{box-sizing:border-box}
+body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:8px 12px;
+       display:flex;justify-content:space-between;align-items:center;z-index:20}
+.brand{font-weight:800;font-size:18px;color:var(--ink)}
+.hamburger{font-size:20px;cursor:pointer;background:none;border:none;padding:4px 6px;border-radius:8px}
+.menu{display:none;flex-direction:column;gap:6px;background:#fff;border:1px solid var(--line);padding:8px;
+      position:absolute;top:48px;right:12px;box-shadow:0 6px 16px rgba(0,0,0,.15);border-radius:10px;z-index:30;width:180px}
+.menu.show{display:flex;animation:fade .12s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.menu .btn{width:100%;text-align:left}
+.btn{border:none;border-radius:12px;padding:6px 10px;font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.btn-green{background:var(--accent);color:#fff}
+.btn-red{background:var(--danger);color:#fff}
+.btn-gray{background:#e5e7eb;color:var(--ink)}
+.list{margin:8px;display:flex;flex-direction:column;gap:6px}
+.card{background:var(--card);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.08);padding:6px;display:flex;
+      justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.name{font-weight:600;font-size:14px;flex:1;min-width:120px}
+.name-input{flex:1;min-width:120px;padding:8px;border:1px solid var(--line);border-radius:10px}
+.time{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;margin-left:auto;margin-right:8px}
+.actions{display:flex;gap:4px}
+table{width:100%;border-collapse:collapse;margin:8px;background:#fff;border-radius:10px;overflow:hidden;
+      box-shadow:0 1px 3px rgba(0,0,0,.08)}
+th,td{padding:8px 10px;font-size:13px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:#f9fafb;font-weight:600;color:#374151}
+tr:last-child td{border-bottom:none}
+h3{margin:8px;font-size:15px;font-weight:700}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin:8px}
+.muted{color:var(--muted);font-size:12px;margin:6px 8px}
 </style>
 </head>
 <body>
 <header>
- <div class="brand">ST</div>
- <div class="toolbar">
-  <button class="btn" onclick="newSession()">New</button>
-  <button class="btn" onclick="viewReport()">Report</button>
-  <button class="btn" onclick="viewAllHistories()">All Histories</button>
-  <button class="btn" onclick="closeSession()">Close</button>
- </div>
+  <div class="brand">Coach Timer</div>
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
+  <div id="menu" class="menu" role="menu">
+    <button class="btn btn-gray" onclick="nav('timers');toggleMenu()">Timers</button>
+    <button class="btn btn-gray" onclick="viewReport();toggleMenu()">Report</button>
+    <button class="btn btn-gray" onclick="nav('roster');toggleMenu()">Roster</button>
+    <button class="btn btn-gray" onclick="viewAllHistories();toggleMenu()">Histories</button>
+    <button class="btn btn-green" onclick="closeSession();toggleMenu()">Close Session</button>
+  </div>
 </header>
 <main id="main"></main>
 
 <script>
-const STORAGE_KEY="ct-v3-2a"; const HISTORY_KEY="ct-hist-v3-2a";
-function msToClock(ms){ if(!ms||ms<=0) return "00.000s"; return (ms/1000).toFixed(3)+"s"; }
-const defaultNames=["Joan Alexander Cicua Lara","Cristobal Correa","Leonardo Ferrer","Guilherme Gomes","Esteban Gomez","Marcelo Gomez","Daniel Hernandez","Ignacio Herrera","Bernardo Kabbach","Dev Kumar","AMITAI LISANI","Cristobal Lander","Pedro Ramos","Juan Diego Rodriguez Alvizu","Tharun Sathish","Aaron Shakibi","Nicolas Suarez","Santiago"];
-function makeDefault(){ return defaultNames.map((n,i)=>({id:i+1,name:n,timeMs:0,running:false,dnr:false})); }
+// ---- Utilities & Storage ----
+function toggleMenu(){ document.getElementById('menu').classList.toggle('show'); }
+document.addEventListener('click', (e)=>{
+  const m=document.getElementById('menu'); if(!m) return;
+  if(!m.contains(e.target) && !e.target.closest('.hamburger')) m.classList.remove('show');
+});
 
-let state = (function(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||null}catch(e){return null}})()
-        || { players: makeDefault(), view: "timers", editing: null };
-let history = (function(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||{}}catch(e){return {}}})();
+const STORAGE_KEY="ct-v3-5"; const HISTORY_KEY="ct-hist-v3-5";
+function msToClock(ms){ if(!Number.isFinite(ms)||ms<=0) return "0.000s"; return (ms/1000).toFixed(3)+"s"; }
+
+const defaultNames=[
+ "Joan Alexander Cicua Lara","Cristobal Correa","Leonardo Ferrer","Guilherme Gomes","Esteban Gomez","Marcelo Gomez",
+ "Daniel Hernandez","Ignacio Herrera","Bernardo Kabbach","Dev Kumar","AMITAI LISANI","Cristobal Lander","Pedro Ramos",
+ "Juan Diego Rodriguez Alvizu","Tharun Sathish","Aaron Shakibi","Nicolas Suarez","Santiago"
+];
+function makeDefault(){ return defaultNames.map((n,i)=>({id:i+1,name:n,timeMs:0,running:false})); }
+
+let state=(function(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||null}catch(e){return null}})()
+      || { players: makeDefault(), view: "timers", editingId: null };
+let history=(function(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||{}}catch(e){return {}}})();
 
 function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 function saveHist(){ localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
 
-function newSession(){ state.players.forEach(p=>{p.timeMs=0;p.running=false;p.dnr=false;}); state.view="timers"; saveState(); render(); }
-function addPlayer(){ const id = state.players.length? Math.max(...state.players.map(p=>p.id))+1 : 1; state.players.push({id,name:"New Player",timeMs:0,running:false,dnr:false}); saveState(); render(); }
-function remPlayer(id){ state.players = state.players.filter(p=>p.id!==id); saveState(); render(); }
-function editName(id){ state.editing = id; saveState(); render(); setTimeout(()=>{ const el=document.getElementById('name-'+id); if(el) el.focus(); }, 50); }
-function saveName(id,val){ const p=state.players.find(p=>p.id===id); if(p) p.name = val; state.editing=null; saveState(); render(); }
-function toggleDnr(id){ const p=state.players.find(p=>p.id===id); if(p){ p.dnr=!p.dnr; p.running=false; saveState(); render(); } }
-function start(id){ const p=state.players.find(p=>p.id===id); if(p){ p.running=true; p.startAt=Date.now()-(p.timeMs||0); p.dnr=false; saveState(); } }
-function stop(id){ const p=state.players.find(p=>p.id===id); if(p&&p.running){ p.timeMs=Date.now()-p.startAt; p.running=false; saveState(); render(); } }
-function resetOne(id){ const p=state.players.find(p=>p.id===id); if(p){ p.timeMs=0; p.running=false; saveState(); render(); } }
-function fastestId(){ const arr=state.players.filter(p=>!p.dnr && p.timeMs>0 && !p.running); if(!arr.length) return null; return arr.reduce((a,b)=> a.timeMs<b.timeMs?a:b).id; }
+// ---- Actions ----
+function nav(v){ state.view=v; saveState(); render(); }
+function newSession(){ state.players=state.players.map(p=>({...p,timeMs:0,running:false})); saveState(); render(); }
+function addPlayer(){ const id=state.players.length?Math.max(...state.players.map(p=>p.id))+1:1; state.players.push({id,name:"New Player",timeMs:0,running:false}); saveState(); render(); }
+function deletePlayer(id){ state.players=state.players.filter(p=>p.id!==id); saveState(); render(); }
+function editPlayer(id){ state.editingId=id; state.view='roster'; saveState(); render(); setTimeout(()=>{const el=document.getElementById('edit-input-'+id); if(el) el.focus();},30); }
+function savePlayer(id){ const el=document.getElementById('edit-input-'+id); const p=state.players.find(x=>x.id===id); if(p&&el){ p.name=el.value.trim()||p.name; } state.editingId=null; saveState(); render(); }
+function cancelEdit(){ state.editingId=null; saveState(); render(); }
+
+function start(id){ const p=state.players.find(x=>x.id===id); if(p){ p.running=true; p.startAt=Date.now()-(p.timeMs||0); saveState(); } }
+function stop(id){ const p=state.players.find(x=>x.id===id); if(p&&p.running){ p.timeMs=Date.now()-p.startAt; p.running=false; saveState(); render(); } }
+function resetOne(id){ const p=state.players.find(x=>x.id===id); if(p){ p.timeMs=0; p.running=false; saveState(); render(); } }
+
+function fastestId(){ const arr=state.players.filter(p=>p.timeMs>0&&!p.running); if(!arr.length) return null; return arr.reduce((a,b)=>a.timeMs<b.timeMs?a:b).id; }
+
+function viewReport(){ state.view='report'; saveState(); render(); }
+function viewAllHistories(){ state.view='allhist'; saveState(); render(); }
+function viewHistory(id){ state.view={name:'history', id}; saveState(); render(); }
 
 function closeSession(){
   const date=new Date().toISOString();
   state.players.forEach(p=>{
-    const rec = { date, timeMs: p.dnr? null : (p.timeMs||0), dnr: !!p.dnr };
-    if(!history[p.id]) history[p.id] = [];
+    const rec={date,timeMs:p.timeMs||0};
+    if(!history[p.id]) history[p.id]=[];
     history[p.id].push(rec);
   });
   saveHist();
-  alert("Session saved to history.");
+  alert('Session saved.');
   newSession();
 }
+function clearAllHistory(){ if(confirm('Clear ALL history?')){ history={}; saveHist(); alert('Cleared.'); } }
 
-function viewReport(){ state.view="report"; saveState(); render(); }
-function backToTimers(){ state.view="timers"; saveState(); render(); }
-function viewHistory(id){ state.view={name:"hist", id}; saveState(); render(); }
-function viewAllHistories(){ state.view="allhist"; saveState(); render(); }
-
+// ---- Renderers ----
 function renderTimers(){
-  const c = document.createElement('div'); c.className='list';
-
+  const c=document.createElement('div'); c.className='list';
   state.players.forEach((p,i)=>{
-    const r = document.createElement('div'); r.className='row';
-
-    const num = document.createElement('div'); num.className='num'; num.textContent = String(i+1); r.appendChild(num);
-
-    const nameCell = document.createElement('div');
-    if(state.editing===p.id){
-      const inp = document.createElement('input'); inp.className='name-input'; inp.id='name-'+p.id; inp.value=p.name;
-      inp.addEventListener('blur', ()=>saveName(p.id, inp.value));
-      inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter') saveName(p.id, inp.value); });
-      nameCell.appendChild(inp);
-    } else {
-      const lab = document.createElement('div'); lab.textContent=p.name; nameCell.appendChild(lab);
-    }
-    r.appendChild(nameCell);
-
-    const time = document.createElement('div'); time.className='time'; time.textContent = p.dnr? 'DNR' : msToClock(p.running ? (Date.now()-p.startAt) : p.timeMs); r.appendChild(time);
-
-    const actions = document.createElement('div');
-    const startBtn = document.createElement('button'); startBtn.className='btn btn-green'; startBtn.textContent='Start'; startBtn.onclick=()=>start(p.id);
-    const stopBtn = document.createElement('button'); stopBtn.className='btn btn-red'; stopBtn.textContent='Stop'; stopBtn.onclick=()=>stop(p.id);
-    const resetBtn = document.createElement('button'); resetBtn.className='btn'; resetBtn.textContent='Reset'; resetBtn.onclick=()=>resetOne(p.id);
-    const dnrBtn = document.createElement('button'); dnrBtn.className='btn'; dnrBtn.textContent=p.dnr? 'Undo DNR':'DNR'; dnrBtn.onclick=()=>toggleDnr(p.id);
-    actions.appendChild(p.running? stopBtn : startBtn);
-    actions.appendChild(resetBtn);
-    actions.appendChild(dnrBtn);
-    r.appendChild(actions);
-
-    const editCol = document.createElement('div');
-    const editBtn = document.createElement('button'); editBtn.className='btn'; editBtn.textContent='✏️'; editBtn.title='Edit name'; editBtn.onclick=()=>editName(p.id);
-    editCol.appendChild(editBtn); r.appendChild(editCol);
-
-    const delCol = document.createElement('div');
-    const delBtn = document.createElement('button'); delBtn.className='btn'; delBtn.textContent='✕'; delBtn.title='Delete'; delBtn.onclick=()=>remPlayer(p.id);
-    delCol.appendChild(delBtn); r.appendChild(delCol);
-
-    c.appendChild(r);
+    const card=document.createElement('div'); card.className='card';
+    const num=document.createElement('div'); num.style.fontSize='12px'; num.style.color='#6b7280'; num.textContent=String(i+1);
+    const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
+    const time=document.createElement('div'); time.className='time'; time.textContent=msToClock(p.running?(Date.now()-p.startAt):p.timeMs);
+    const actions=document.createElement('div'); actions.className='actions';
+    const startBtn=document.createElement('button'); startBtn.className='btn btn-green'; startBtn.textContent='▶'; startBtn.onclick=()=>start(p.id);
+    const stopBtn=document.createElement('button'); stopBtn.className='btn btn-red'; stopBtn.textContent='⏸'; stopBtn.onclick=()=>stop(p.id);
+    const resetBtn=document.createElement('button'); resetBtn.className='btn btn-gray'; resetBtn.textContent='⟳'; resetBtn.onclick=()=>resetOne(p.id);
+    actions.appendChild(p.running? stopBtn : startBtn); actions.appendChild(resetBtn);
+    const editBtn=document.createElement('button'); editBtn.className='btn btn-gray'; editBtn.textContent='✏️'; editBtn.onclick=()=>editPlayer(p.id);
+    const delBtn=document.createElement('button'); delBtn.className='btn btn-red'; delBtn.textContent='✕'; delBtn.onclick=()=>deletePlayer(p.id);
+    card.appendChild(num); card.appendChild(name); card.appendChild(time); card.appendChild(actions); card.appendChild(editBtn); card.appendChild(delBtn);
+    c.appendChild(card);
   });
+  // Tools under list
+  const tools=document.createElement('div'); tools.className='toolbar';
+  const add=document.createElement('button'); add.className='btn btn-green'; add.textContent='+ Add Player'; add.onclick=addPlayer;
+  const newBtn=document.createElement('button'); newBtn.className='btn btn-gray'; newBtn.textContent='New Session'; newBtn.onclick=newSession;
+  tools.appendChild(add); tools.appendChild(newBtn); c.appendChild(tools);
+  return c;
+}
 
-  const tools = document.createElement('div'); tools.className='toolbar';
-  const addBtn = document.createElement('button'); addBtn.className='btn'; addBtn.textContent='+ Add Player'; addBtn.onclick=addPlayer;
-  const startAll = document.createElement('button'); startAll.className='btn'; startAll.textContent='Start All'; startAll.onclick=()=>state.players.forEach(p=>start(p.id));
-  const stopAll = document.createElement('button'); stopAll.className='btn'; stopAll.textContent='Stop All'; stopAll.onclick=()=>state.players.forEach(p=>stop(p.id));
-  const resetAll = document.createElement('button'); resetAll.className='btn'; resetAll.textContent='Reset All'; resetAll.onclick=()=>state.players.forEach(p=>resetOne(p.id));
-  tools.appendChild(addBtn); tools.appendChild(startAll); tools.appendChild(stopAll); tools.appendChild(resetAll);
-  c.appendChild(tools);
-
+function renderRoster(){
+  const c=document.createElement('div'); c.className='list';
+  state.players.forEach((p,i)=>{
+    const card=document.createElement('div'); card.className='card';
+    const num=document.createElement('div'); num.style.fontSize='12px'; num.style.color='#6b7280'; num.textContent=String(i+1);
+    if(state.editingId===p.id){
+      const inp=document.createElement('input'); inp.id='edit-input-'+p.id; inp.className='name-input'; inp.value=p.name;
+      const save=document.createElement('button'); save.className='btn btn-green'; save.textContent='Save'; save.onclick=()=>savePlayer(p.id);
+      const cancel=document.createElement('button'); cancel.className='btn btn-gray'; cancel.textContent='Cancel'; cancel.onclick=cancelEdit;
+      card.appendChild(num); card.appendChild(inp); card.appendChild(save); card.appendChild(cancel);
+    } else {
+      const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
+      const edit=document.createElement('button'); edit.className='btn btn-gray'; edit.textContent='Edit'; edit.onclick=()=>editPlayer(p.id);
+      const del=document.createElement('button'); del.className='btn btn-red'; del.textContent='Delete'; del.onclick=()=>deletePlayer(p.id);
+      card.appendChild(num); card.appendChild(name); card.appendChild(edit); card.appendChild(del);
+    }
+    c.appendChild(card);
+  });
+  const tools=document.createElement('div'); tools.className='toolbar';
+  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
+  const add=document.createElement('button'); add.className='btn btn-green'; add.textContent='+ Add Player'; add.onclick=addPlayer;
+  tools.appendChild(back); tools.appendChild(add); c.appendChild(tools);
   return c;
 }
 
 function renderReport(){
-  const c = document.createElement('div');
-  const tools = document.createElement('div'); tools.className='toolbar';
-  const back = document.createElement('button'); back.className='btn'; back.textContent='Back'; back.onclick=backToTimers;
-  const clear = document.createElement('button'); clear.className='btn'; clear.textContent='Clear All History'; clear.onclick=()=>{ if(confirm('Clear ALL history?')){ history={}; saveHist(); alert('Cleared.'); } };
+  const c=document.createElement('div');
+  const tools=document.createElement('div'); tools.className='toolbar';
+  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
+  const clear=document.createElement('button'); clear.className='btn btn-red'; clear.textContent='Clear All History'; clear.onclick=clearAllHistory;
   tools.appendChild(back); tools.appendChild(clear); c.appendChild(tools);
 
-  const t = document.createElement('table');
-  const thead = document.createElement('thead'); const trh = document.createElement('tr');
-  ['#','Name','Time','Tag','History'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+  const t=document.createElement('table');
+  const thead=document.createElement('thead'); const trh=document.createElement('tr');
+  ['#','Player','Time','Tag','History'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);});
   thead.appendChild(trh); t.appendChild(thead);
-  const tbody = document.createElement('tbody');
-
-  const fastest = fastestId();
+  const tbody=document.createElement('tbody');
+  const fastest=fastestId();
   state.players.forEach((p,i)=>{
-    const tr = document.createElement('tr');
+    const tr=document.createElement('tr');
     const td1=document.createElement('td'); td1.textContent=String(i+1);
-    const tms = p.running ? (Date.now()-p.startAt) : p.timeMs;
     const td2=document.createElement('td'); td2.textContent=p.name;
-    const td3=document.createElement('td'); td3.textContent= p.dnr? 'DNR' : (tms? msToClock(tms) : '—');
-    const td4=document.createElement('td'); td4.textContent= (fastest && p.id===fastest && !p.dnr && tms) ? 'FASTEST 🏅' : (p.dnr ? 'DNR' : '');
-    const td5=document.createElement('td'); const hbtn=document.createElement('button'); hbtn.className='btn'; hbtn.textContent='History'; hbtn.onclick=()=>viewHistory(p.id); td5.appendChild(hbtn);
-    [td1,td2,td3,td4,td5].forEach(td=>tr.appendChild(td));
-    tbody.appendChild(tr);
+    const tms=p.running?(Date.now()-p.startAt):p.timeMs;
+    const td3=document.createElement('td'); td3.textContent=tms?msToClock(tms):'—';
+    const td4=document.createElement('td'); td4.textContent=(fastest&&p.id===fastest&&tms)?'FASTEST 🏅':'';
+    const td5=document.createElement('td'); const h=document.createElement('button'); h.className='btn btn-gray'; h.textContent='History'; h.onclick=()=>viewHistory(p.id); td5.appendChild(h);
+    [td1,td2,td3,td4,td5].forEach(td=>tr.appendChild(td)); tbody.appendChild(tr);
   });
-  t.appendChild(tbody); c.appendChild(t);
-  return c;
+  t.appendChild(tbody); c.appendChild(t); return c;
 }
 
 function renderHistory(pid){
-  const c = document.createElement('div');
-  const tools = document.createElement('div'); tools.className='toolbar';
-  const back = document.createElement('button'); back.className='btn'; back.textContent='Back to Report'; back.onclick=viewReport;
+  const c=document.createElement('div');
+  const tools=document.createElement('div'); tools.className='toolbar';
+  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back to Report'; back.onclick=viewReport;
   tools.appendChild(back); c.appendChild(tools);
-
-  const recs = history[pid] || [];
-  const player = state.players.find(p=>p.id===pid) || {name:'Player'};
-  const h3 = document.createElement('h3'); h3.textContent = player.name + ' — History'; h3.style.margin = '6px 10px'; c.appendChild(h3);
-
-  const t = document.createElement('table');
-  const thead = document.createElement('thead'); const trh = document.createElement('tr');
-  ['Date','Time'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
-  thead.appendChild(trh); t.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  recs.forEach(r=>{
-    const tr = document.createElement('tr');
-    const td1=document.createElement('td'); td1.textContent = (new Date(r.date)).toLocaleString();
-    const td2=document.createElement('td'); td2.textContent = r.dnr ? 'DNR' : (r.timeMs ? msToClock(r.timeMs) : '—');
-    tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);
-  });
-  t.appendChild(tbody); c.appendChild(t);
-  if(!recs.length){ const p=document.createElement('p'); p.textContent='No history yet.'; p.className='toolbar'; c.appendChild(p); }
-  return c;
+  const recs=history[pid]||[]; const player=state.players.find(p=>p.id===pid)||{name:'Player'};
+  const h3=document.createElement('h3'); h3.textContent=player.name+' — History'; c.appendChild(h3);
+  const t=document.createElement('table'); const thead=document.createElement('thead'); const trh=document.createElement('tr');
+  ['Date','Time'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);}); thead.appendChild(trh); t.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  recs.forEach(r=>{const tr=document.createElement('tr'); const td1=document.createElement('td'); td1.textContent=(new Date(r.date)).toLocaleString();
+                   const td2=document.createElement('td'); td2.textContent=r.timeMs?msToClock(r.timeMs):'—';
+                   tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);});
+  t.appendChild(tbody); c.appendChild(t); if(!recs.length){const p=document.createElement('p'); p.textContent='No history yet.'; p.className='muted'; c.appendChild(p);} return c;
 }
 
 function renderAllHistories(){
-  const c = document.createElement('div');
-  const tools = document.createElement('div'); tools.className='toolbar';
-  const back = document.createElement('button'); back.className='btn'; back.textContent='Back'; back.onclick=backToTimers;
+  const c=document.createElement('div');
+  const tools=document.createElement('div'); tools.className='toolbar';
+  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
   tools.appendChild(back); c.appendChild(tools);
-
-  const t = document.createElement('table');
-  const thead = document.createElement('thead'); const trh=document.createElement('tr');
-  ['Name','Latest'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
-  thead.appendChild(trh); t.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  state.players.forEach(p=>{
-    const recs = history[p.id] || [];
-    const latest = recs.length ? recs[recs.length-1] : null;
-    const tr=document.createElement('tr');
-    const td1=document.createElement('td'); td1.textContent=p.name; td1.style.cursor='pointer'; td1.onclick=()=>viewHistory(p.id);
-    const td2=document.createElement('td'); td2.textContent = latest ? (latest.dnr ? 'DNR' : (latest.timeMs? msToClock(latest.timeMs) : '—')) : '—';
-    tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);
-  });
-  t.appendChild(tbody); c.appendChild(t);
-  return c;
+  const t=document.createElement('table'); const thead=document.createElement('thead'); const trh=document.createElement('tr');
+  ['Player','Latest'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);}); thead.appendChild(trh); t.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  state.players.forEach(p=>{const recs=history[p.id]||[]; const latest=recs.length?recs[recs.length-1]:null;
+    const tr=document.createElement('tr'); const td1=document.createElement('td'); td1.textContent=p.name; td1.style.cursor='pointer'; td1.onclick=()=>viewHistory(p.id);
+    const td2=document.createElement('td'); td2.textContent=latest?(latest.timeMs?msToClock(latest.timeMs):'—'):'—'; tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);});
+  t.appendChild(tbody); c.appendChild(t); return c;
 }
 
 function render(){
-  const main = document.getElementById('main');
-  main.innerHTML='';
-  if(state.view==='timers'){ main.appendChild(renderTimers()); }
-  else if(state.view==='report'){ main.appendChild(renderReport()); }
-  else if(typeof state.view==='object' && state.view.name==='hist'){ main.appendChild(renderHistory(state.view.id)); }
-  else if(state.view==='allhist'){ main.appendChild(renderAllHistories()); }
+  const main=document.getElementById('main'); main.innerHTML='';
+  if(state.view==='timers') main.appendChild(renderTimers());
+  else if(state.view==='roster') main.appendChild(renderRoster());
+  else if(state.view==='report') main.appendChild(renderReport());
+  else if(typeof state.view==='object'&&state.view.name==='history') main.appendChild(renderHistory(state.view.id));
+  else if(state.view==='allhist') main.appendChild(renderAllHistories());
 }
-
 setInterval(()=>{ if(state.view==='timers') render(); }, 300);
 render();
 
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js'); }
+if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 </script>
 </body></html>
