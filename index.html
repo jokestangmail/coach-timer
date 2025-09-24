@@ -1,1 +1,378 @@
-<!DOCTYPE html><html><body><h1>Coach Timer v3 placeholder</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Coach Timer v3</title>
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <style>
+:root {
+  --bg: #fffbeb;
+  --line: #f4e5a1;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #111827;
+  --green: #059669;
+  --red: #b91c1c;
+  --blue: #1d4ed8;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+header { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(6px); background: rgba(255, 251, 235, 0.95); border-bottom: 1px solid var(--line); }
+.container { max-width: 860px; margin: 0 auto; padding: 10px 12px; }
+.brand { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #facc15; display: grid; place-items: center; font-weight: 800; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.input { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: #fff; }
+.btn { border: 1px solid var(--line); background: #fff; padding: 8px 10px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: #facc15; border-color: var(--accent); }
+.btn-green { background: #059669; color: #fff; border-color: #059669; }
+.btn-red { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+.muted { color: var(--muted); font-size: 12px; }
+.list { display: grid; grid-template-columns: 1fr; }
+.row { display: grid; grid-template-columns: 28px 1fr 110px 120px 34px; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px dashed var(--line); }
+.num { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; width: 28px; }
+.name-label { padding: 4px 6px; border-radius: 8px; }
+.name-input { width: 100%; border: 1px solid var(--line); background: #fff; padding: 6px 8px; border-radius: 8px; }
+.time { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; text-align: center; letter-spacing: -0.3px; }
+.tiny { font-size: 12px; }
+.actions { display: flex; gap: 6px; }
+.delcol { display: flex; justify-content: flex-end; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { border-bottom: 1px dashed var(--line); padding: 6px 8px; text-align: left; }
+.table th { color: var(--muted); font-weight: 600; }
+.report-header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+@media (max-width: 390px) {
+  .row { grid-template-columns: 24px 1fr 96px 110px 30px; gap: 6px; padding: 5px 2px; }
+  .btn { padding: 6px 8px; }
+}
+</style>
+</head>
+<body>
+  <header>
+    <div class="container" style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="brand">ST</div>
+        <input id="sessionName" class="input" style="font-weight:700; font-size:18px; min-width: 160px;" value="Start-of-Practice Sprints" />
+      </div>
+      <div class="toolbar">
+        <button class="btn" onclick="newSession()">New session</button>
+        <button class="btn" onclick="viewReport()">View Report</button>
+        <button class="btn-primary" onclick="closeSession()">Close Session</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" id="main">
+    <p class="muted tiny">Compact list for iPhone. Tap a name to edit (it will stick open). One time per kid. DNR marks absences. Close Session saves history.</p>
+    <div id="list" class="list"></div>
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn" onclick="addPlayer()">+ Add Player</button>
+      <button class="btn" onclick="startAll()">Start All</button>
+      <button class="btn" onclick="stopAll()">Stop All</button>
+      <button class="btn" onclick="resetAll()">Reset All</button>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+  const STORAGE_KEY = "coach-timer-v3-full";
+  const HISTORY_KEY = "coach-timer-history-v3-full";
+
+  function msToClock(ms){ if(!Number.isFinite(ms)||ms<0) return "00:00.000";
+    const m=Math.floor(ms/60000), s=Math.floor((ms%60000)/1000), x=Math.floor(ms%1000);
+    return String(m).padStart(2,'0')+":"+String(s).padStart(2,'0')+"."+String(x).padStart(3,'0'); }
+
+  const defaultNames = [
+    "Joan Alexander Cicua Lara","Cristobal Correa","Leonardo Ferrer","Guilherme Gomes",
+    "Esteban Gomez","Marcelo Gomez","Daniel Hernandez","Ignacio Herrera","Bernardo Kabbach",
+    "Dev Kumar","AMITAI LISANI","Cristobal Lander","Pedro Ramos","Juan Diego Rodriguez Alvizu",
+    "Tharun Sathish","Aaron Shakibi","Nicolas Suarez","Santiago"
+  ];
+
+  function defaultPlayers(){
+    return defaultNames.map((n, i)=>({ id:i+1, name:n, timeMs:0, running:false, startedAt:0, dnr:false }));
+  }
+
+  function loadState(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch(e){ return null; } }
+  function loadHistory(){ try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; } catch(e){ return {}; } }
+  function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function saveHistory(){ localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+
+  let state = loadState() || { sessionName:"Start-of-Practice Sprints", players: defaultPlayers(), editingId: null, view:"timers" };
+  let history = loadHistory(); // { [playerId]: [ {date, session, timeMs, dnr} ] }
+
+  const sessionNameEl = document.getElementById('sessionName');
+  sessionNameEl.value = state.sessionName || "Start-of-Practice Sprints";
+  sessionNameEl.addEventListener('input', ()=>{ state.sessionName = sessionNameEl.value; saveState(); });
+
+  const main = document.getElementById('main');
+
+  function newSession(){
+    state.players = state.players.map(p => ({ ...p, timeMs:0, running:false, startedAt:0, dnr:false }));
+    state.view = "timers"; saveState(); render();
+  }
+  function addPlayer(){
+    const nextId = state.players.length ? Math.max(...state.players.map(p=>p.id))+1 : 1;
+    state.players.push({ id: nextId, name:"New Player", timeMs:0, running:false, startedAt:0, dnr:false });
+    saveState(); render();
+  }
+  function removePlayer(id){
+    state.players = state.players.filter(p => p.id !== id);
+    saveState(); render();
+  }
+  function start(id){
+    state.players = state.players.map(p => p.id===id ? (p.running ? p : { ...p, running:true, startedAt: Date.now() - p.timeMs, dnr:false }) : p);
+    saveState(); render();
+  }
+  function stop(id){
+    state.players = state.players.map(p => p.id===id ? (!p.running ? p : { ...p, running:false, timeMs: Date.now() - p.startedAt }) : p);
+    saveState(); render();
+  }
+  function resetOne(id){
+    state.players = state.players.map(p => p.id===id ? { ...p, timeMs:0, running:false, startedAt:0 } : p);
+    saveState(); render();
+  }
+  function startAll(){ state.players.forEach(p=>start(p.id)); }
+  function stopAll(){ state.players.forEach(p=>stop(p.id)); }
+  function resetAll(){ state.players.forEach(p=>resetOne(p.id)); }
+  function toggleDnr(id){
+    state.players = state.players.map(p => p.id===id ? { ...p, dnr: !p.dnr, running:false } : p);
+    saveState(); render();
+  }
+
+  function setEditing(id){
+    state.editingId = id; saveState(); render();
+    const input = document.querySelector('#name-input-' + id);
+    if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+  }
+  function saveName(id, value){
+    state.players = state.players.map(p => p.id===id ? { ...p, name:value } : p);
+    state.editingId = null; saveState(); render();
+  }
+
+  function currentFastest(){
+    const withTimes = state.players.filter(p => !p.dnr && p.timeMs>0 && !p.running);
+    if (!withTimes.length) return null;
+    return withTimes.reduce((best,p)=> p.timeMs < best.timeMs ? p : best, withTimes[0]).id;
+  }
+
+  function viewReport(){ state.view = "report"; saveState(); render(); }
+  function backToTimers(){ state.view = "timers"; saveState(); render(); }
+  function viewHistory(playerId){ state.view = { name: "history", id: playerId }; saveState(); render(); }
+
+  async function shareReport(){
+    const csv = csvForSession();
+    const file = new File([csv], "session-results.csv", { type: "text/csv" });
+    const text = textSummaryForSession();
+    if (navigator.share && navigator.canShare && navigator.canShare({ files:[file] })) {
+      try { await navigator.share({ title: state.sessionName, text, files:[file] }); } catch(e){}
+    } else if (navigator.share) {
+      try { await navigator.share({ title: state.sessionName, text }); } catch(e){}
+    } else {
+      downloadCsv();
+      alert("CSV downloaded. Share via Messages or Mail.");
+    }
+  }
+  function downloadCsv(){
+    const csv = csvForSession();
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+    a.href = url; a.download = (state.sessionName.replace(/[^a-z0-9]+/gi,'-')||'session') + "-" + stamp + ".csv";
+    a.click(); URL.revokeObjectURL(url);
+  }
+  function csvForSession(){
+    const rows = [["Session","Name","Time(ms)","Time(clock)","DNR"]];
+    state.players.forEach(p=>{
+      const t = p.running ? (Date.now()-p.startedAt) : p.timeMs;
+      rows.push([state.sessionName, p.name, p.dnr? "" : (t||""), p.dnr? "DNR" : (t? msToClock(t):""), p.dnr ? "DNR" : ""]);
+    });
+    return rows.map(r=>r.map(v=>{
+      const s=String(v??""); return (s.includes(",")||s.includes("\n")||s.includes('"'))? '"' + s.replaceAll('"','""') + '"' : s;
+    }).join(",")).join("\n");
+  }
+  function textSummaryForSession(){
+    const lines = [];
+    const fastestId = currentFastest();
+    state.players.forEach((p,i)=>{
+      const t = p.running ? (Date.now()-p.startedAt) : p.timeMs;
+      const label = p.dnr ? "DNR" : (t? msToClock(t) : "—");
+      const star = (fastestId && p.id===fastestId) ? " 🏅" : "";
+      lines.push(String(i+1).padStart(2,'0')+". "+p.name+" — "+label+star);
+    });
+    return state.sessionName + "\n" + lines.join("\n");
+  }
+
+  function closeSession(){
+    const date = new Date().toISOString();
+    state.players.forEach(p=>{
+      const t = p.running ? (Date.now()-p.startedAt) : p.timeMs;
+      const rec = { date, session: state.sessionName, timeMs: p.dnr? null : (t||null), dnr: !!p.dnr };
+      if (!history[p.id]) history[p.id] = [];
+      history[p.id].push(rec);
+    });
+    saveHistory();
+    alert("Session saved to history.");
+    newSession();
+  }
+
+  function renderTimers(){
+    const c = document.createElement('div');
+    const list = document.createElement('div'); list.className = 'list';
+    const fastestId = currentFastest();
+
+    state.players.forEach((p, idx)=>{
+      const row = document.createElement('div'); row.className = 'row' + ((fastestId && p.id===fastestId && !p.dnr && p.timeMs>0 && !p.running) ? ' fastest' : '');
+
+      const num = document.createElement('div'); num.className='num tiny'; num.textContent = String(idx+1);
+      row.appendChild(num);
+
+      const nameCell = document.createElement('div');
+      if (state.editingId === p.id) {
+        const input = document.createElement('input'); input.className='name-input'; input.id = 'name-input-'+p.id; input.value = p.name;
+        input.addEventListener('keydown', (e)=>{ if (e.key==='Enter') saveName(p.id, input.value); });
+        input.addEventListener('blur', ()=> saveName(p.id, input.value));
+        nameCell.appendChild(input);
+      } else {
+        const label = document.createElement('div'); label.className='name-label'; label.textContent = p.name; label.addEventListener('click', ()=> setEditing(p.id));
+        nameCell.appendChild(label);
+      }
+      row.appendChild(nameCell);
+
+      const time = document.createElement('div'); time.className='time tiny';
+      const tVal = p.running ? (Date.now() - p.startedAt) : p.timeMs;
+      time.textContent = p.dnr ? 'DNR' : msToClock(tVal);
+      row.appendChild(time);
+
+      const actions = document.createElement('div'); actions.className='actions';
+      const startBtn = document.createElement('button'); startBtn.className='btn btn-green tiny'; startBtn.textContent='Start'; startBtn.onclick = ()=>start(p.id);
+      const stopBtn  = document.createElement('button'); stopBtn.className='btn btn-red tiny';  stopBtn.textContent='Stop';  stopBtn.onclick = ()=>stop(p.id);
+      const resetBtn = document.createElement('button'); resetBtn.className='btn tiny';          resetBtn.textContent='Reset'; resetBtn.onclick = ()=>resetOne(p.id);
+      actions.appendChild(p.running ? stopBtn : startBtn);
+      actions.appendChild(resetBtn);
+      const dnrBtn = document.createElement('button'); dnrBtn.className='btn tiny'; dnrBtn.textContent = p.dnr ? 'Undo DNR' : 'DNR'; dnrBtn.onclick = ()=>toggleDnr(p.id);
+      actions.appendChild(dnrBtn);
+      row.appendChild(actions);
+
+      const delcol = document.createElement('div'); delcol.className='delcol';
+      const delBtn = document.createElement('button'); delBtn.className='btn tiny'; delBtn.title='Delete'; delBtn.textContent='✕'; delBtn.onclick = ()=>removePlayer(p.id);
+      delcol.appendChild(delBtn);
+      row.appendChild(delcol);
+
+      list.appendChild(row);
+    });
+
+    c.appendChild(list);
+    return c;
+  }
+
+  function renderReport(){
+    const c = document.createElement('div');
+    const header = document.createElement('div'); header.className='report-header';
+    const title = document.createElement('h3'); title.textContent = 'Session Report'; title.style.margin='8px 0';
+    const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='8px';
+    const back = document.createElement('button'); back.className='btn'; back.textContent='Back'; back.onclick=backToTimers;
+    const share = document.createElement('button'); share.className='btn-primary'; share.textContent='Share'; share.onclick=shareReport;
+    const csv = document.createElement('button'); csv.className='btn'; csv.textContent='CSV'; csv.onclick=downloadCsv;
+    controls.appendChild(back); controls.appendChild(share); controls.appendChild(csv);
+    header.appendChild(title); header.appendChild(controls);
+    c.appendChild(header);
+
+    const fastestId = currentFastest();
+
+    const table = document.createElement('table'); table.className='table';
+    const thead = document.createElement('thead'); const trh = document.createElement('tr');
+    ['#','Player','Time','Tag'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+    thead.appendChild(trh); table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+
+    state.players.forEach((p, i)=>{
+      const tr = document.createElement('tr');
+      if (fastestId && p.id===fastestId && !p.dnr && p.timeMs>0 && !p.running) tr.style.background = '#fff7ed';
+      const td1=document.createElement('td'); td1.textContent=String(i+1);
+      const td2=document.createElement('td'); td2.textContent=p.name; td2.style.cursor='pointer'; td2.onclick=()=>viewHistory(p.id);
+      const t = p.running ? (Date.now()-p.startedAt) : p.timeMs;
+      const td3=document.createElement('td'); td3.textContent = p.dnr ? 'DNR' : (t? msToClock(t) : '—');
+      const td4=document.createElement('td'); td4.textContent = (fastestId && p.id===fastestId && !p.dnr && t) ? 'FASTEST' : (p.dnr ? 'DNR' : '');
+      [td1,td2,td3,td4].forEach(td=> tr.appendChild(td));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    c.appendChild(table);
+
+    return c;
+  }
+
+  function renderHistory(playerId){
+    const p = state.players.find(x=>x.id===playerId) || {name:'Player'};
+    const c = document.createElement('div');
+    const header = document.createElement('div'); header.className='report-header';
+    const title = document.createElement('h3'); title.textContent = p.name + ' — History'; title.style.margin='8px 0';
+    const back = document.createElement('button'); back.className='btn'; back.textContent='Back to Report'; back.onclick=()=>{ state.view='report'; saveState(); render(); };
+    header.appendChild(title); header.appendChild(back);
+    c.appendChild(header);
+
+    const records = (history[playerId] || []);
+    const labels = records.filter(r=>!r.dnr && r.timeMs!=null).map(r=> (new Date(r.date)).toLocaleDateString());
+    const data = records.filter(r=>!r.dnr && r.timeMs!=null).map(r=> (r.timeMs/1000).toFixed(3));
+
+    const canvas = document.createElement('canvas'); canvas.style.height='220px'; canvas.style.maxWidth='100%';
+    c.appendChild(canvas);
+
+    const table = document.createElement('table'); table.className='table';
+    const thead = document.createElement('thead'); const trh = document.createElement('tr');
+    ['Date','Session','Time'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+    thead.appendChild(trh); table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    records.forEach(r=>{
+      const tr=document.createElement('tr');
+      const td1=document.createElement('td'); td1.textContent=(new Date(r.date)).toLocaleString();
+      const td2=document.createElement('td'); td2.textContent=r.session;
+      const td3=document.createElement('td'); td3.textContent= r.dnr ? 'DNR' : (r.timeMs? msToClock(r.timeMs) : '—');
+      [td1,td2,td3].forEach(td=> tr.appendChild(td));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    c.appendChild(table);
+
+    setTimeout(()=>{
+      if (typeof Chart !== 'undefined') {
+        new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: { labels, datasets: [{ label:'Seconds (lower is faster)', data, fill:false, tension:0.25 }] },
+          options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:false } } }
+        });
+      } else {
+        const note = document.createElement('div'); note.className='muted'; note.textContent='(Chart library not loaded)';
+        c.insertBefore(note, canvas);
+      }
+    }, 0);
+
+    return c;
+  }
+
+  function render(){
+    const main = document.getElementById('main');
+    main.innerHTML = '';
+    if (state.view === 'timers') {
+      main.appendChild(renderTimers());
+    } else if (state.view === 'report') {
+      main.appendChild(renderReport());
+    } else if (typeof state.view === 'object' && state.view.name === 'history') {
+      main.appendChild(renderHistory(state.view.id));
+    }
+  }
+
+  setInterval(()=>{ if (state.view==='timers') render(); }, 150);
+  render();
+
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js'); }
+  </script>
+</body>
+</html>
