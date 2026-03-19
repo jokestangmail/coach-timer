@@ -1,221 +1,988 @@
 <!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Coach Timer v3.7 (Continuation)</title>
-<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#10b981">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Coach Timer</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f2f2f7">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f3f4f6;--card:#fff;--muted:#6b7280;--line:#e5e7eb;--accent:#10b981;--danger:#ef4444;--ink:#111827}
-*{box-sizing:border-box}
-body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:20}
-.brand{font-weight:800;font-size:20px;color:var(--ink)}
-.hamburger{font-size:26px;cursor:pointer;background:none;border:none;padding:8px;border-radius:8px}
-.menu{display:none;flex-direction:column;gap:12px;background:#fff;border:1px solid var(--line);padding:14px;position:absolute;top:60px;right:16px;box-shadow:0 6px 16px rgba(0,0,0,.15);border-radius:12px;z-index:30;width:220px}
-.menu.show{display:flex}
-.menu .btn{font-size:17px;padding:12px;text-align:left}
-.btn{border:none;border-radius:12px;padding:12px 16px;font-size:16px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.btn-green{background:var(--accent);color:#fff}
-.btn-red{background:var(--danger);color:#fff}
-.btn-gray{background:#e5e7eb;color:var(--ink)}
-.list{margin:12px;display:flex;flex-direction:column;gap:12px}
-.card{background:var(--card);border-radius:14px;box-shadow:0 2px 4px rgba(0,0,0,.1);padding:14px;display:flex;flex-direction:column;gap:8px}
-.card.running{background:#d1fae5}
-.row-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.name{font-weight:600;font-size:17px;flex:1;min-width:120px}
-.name-input{flex:1;min-width:120px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:16px}
-.time{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:19px;font-weight:700;text-align:left;margin-left:26px}
-.actions{display:flex;gap:8px}
-table{width:100%;border-collapse:collapse;margin:12px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-th,td{padding:12px 14px;font-size:15px;text-align:left;border-bottom:1px solid var(--line)}
-th{background:#f9fafb;font-weight:600;color:#374151}
-tr:last-child td{border-bottom:none}
-h3{margin:12px;font-size:18px;font-weight:700}
-.toolbar{display:flex;gap:12px;flex-wrap:wrap;margin:12px}
-.muted{color:var(--muted);font-size:14px;margin:8px 12px}
+:root {
+  --bg:#f2f2f7; --bg2:#e8e8ed;
+  --surface:#ffffff; --surface2:#f2f2f7; --surface3:#e5e5ea;
+  --border:#d1d1d6; --border2:#c7c7cc;
+  --accent:#1a9e5c; --accent-light:#34c77b;
+  --accent-dim:rgba(26,158,92,0.1); --accent-glow:rgba(26,158,92,0.22); --accent-border:rgba(26,158,92,0.28);
+  --danger:#d93025; --danger-dim:rgba(217,48,37,0.09); --danger-border:rgba(217,48,37,0.2);
+  --warn:#b8860b; --warn-bright:#f59e0b; --warn-dim:rgba(245,158,11,0.1); --warn-border:rgba(245,158,11,0.25);
+  --blue:#1a73e8; --blue-dim:rgba(26,115,232,0.09); --blue-border:rgba(26,115,232,0.2);
+  --swipe-green:#1a9e5c; --swipe-red:#d93025; --swipe-orange:#f59e0b; --swipe-gray:#8e8e93;
+  --text:#1c1c1e; --text2:#48484a; --text3:#6d6d72; --muted:#8e8e93; --muted2:#aeaeb2;
+  --running-bg:rgba(26,158,92,0.06); --running-border:rgba(26,158,92,0.3);
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overscroll-behavior:none;}
+::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(242,242,247,0.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 14px;height:54px;}
+.brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:var(--accent);flex-shrink:0;}
+.session-pill{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.3px;flex-shrink:0;transition:all 0.3s;box-shadow:var(--shadow-sm);}
+.session-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);transition:all 0.3s;}
+.session-pill.live{border-color:var(--accent-border);color:var(--accent);background:var(--accent-dim);}
+.session-pill.live .session-dot{background:var(--accent);box-shadow:0 0 5px var(--accent-glow);animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.55);}}
+.nav-tabs{display:flex;gap:2px;flex:1;justify-content:center;}
+.nav-tab{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer;transition:all 0.18s;letter-spacing:0.5px;text-transform:uppercase;}
+.nav-tab:hover{color:var(--text2);background:var(--surface3);}
+.nav-tab.active{color:var(--accent);background:var(--accent-dim);}
+
+/* BUTTONS */
+.btn{border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn:active{transform:scale(0.94);}
+.btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+.btn-xs{font-size:12px;padding:6px 11px;}
+.btn-sm{font-size:13px;padding:8px 14px;}
+.btn-md{font-size:14px;padding:11px 20px;}
+.btn-green{background:var(--accent);color:#fff;box-shadow:var(--shadow-sm);}
+.btn-green:hover:not(:disabled){background:var(--accent-light);box-shadow:0 4px 14px var(--accent-glow);}
+.btn-red{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger-border);}
+.btn-red:hover:not(:disabled){background:var(--danger);color:#fff;}
+.btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);box-shadow:var(--shadow-sm);}
+.btn-ghost:hover:not(:disabled){border-color:var(--border2);background:var(--surface3);}
+.btn-warn{background:var(--warn-dim);color:var(--warn);border:1px solid var(--warn-border);}
+.btn-warn:hover:not(:disabled){background:var(--warn-bright);color:#fff;border-color:transparent;}
+.btn-blue{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-border);}
+.btn-blue:hover:not(:disabled){background:var(--blue);color:#fff;}
+.btn-orange{background:rgba(245,158,11,0.1);color:#c47d00;border:1px solid rgba(245,158,11,0.25);}
+.btn-orange:hover:not(:disabled){background:var(--warn-bright);color:#fff;border-color:transparent;}
+
+/* VIEWS */
+.view{display:none;padding-bottom:50px;}
+.view.active{display:block;}
+
+/* TIMER TOOLBAR */
+.timer-toolbar{display:flex;gap:7px;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center;box-shadow:var(--shadow-sm);}
+.search-wrap{position:relative;flex:1;min-width:110px;}
+.search-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 10px 8px 30px;outline:none;transition:all 0.2s;}
+.search-input:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-dim);}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+
+/* SWIPE HINT */
+.swipe-hint{display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 12px;font-size:11px;color:var(--muted);background:var(--bg2);}
+.swipe-hint span{display:flex;align-items:center;gap:3px;}
+
+/* STATS ROW */
+.stats-row{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px 14px;flex-shrink:0;text-align:center;min-width:70px;box-shadow:var(--shadow-sm);}
+.stat-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--accent);}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+
+/* SESSION BANNER */
+.session-banner{margin:8px 12px 2px;border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;transition:all 0.3s;}
+.session-banner.open{background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);}
+.session-banner.closed{background:var(--surface);border:1px solid var(--border);color:var(--muted);box-shadow:var(--shadow-sm);}
+.sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.session-banner.open .sb-dot{background:var(--accent);animation:pulse 1.4s infinite;}
+.session-banner.closed .sb-dot{background:var(--muted2);}
+.sb-text{flex:1;}
+.sb-dur{font-family:'DM Mono',monospace;font-size:11px;opacity:0.75;}
+
+/* PLAYER LIST + SWIPE */
+.player-list{padding:8px 12px;display:flex;flex-direction:column;gap:7px;}
+
+/* Each item = clip container + swipe layers */
+.swipe-item{position:relative;border-radius:var(--radius);overflow:hidden;flex-shrink:0;}
+
+/* Swipe reveal backgrounds — left (start=green) and right (stop/reset=red/orange) */
+.swipe-bg{
+  position:absolute;inset:0;display:flex;align-items:center;
+  border-radius:var(--radius);pointer-events:none;
+}
+.swipe-bg-left{justify-content:flex-start;background:var(--swipe-green);padding-left:20px;}
+.swipe-bg-right{justify-content:flex-end;background:var(--swipe-red);padding-right:20px;}
+.swipe-bg-right.is-running{background:var(--swipe-red);}
+.swipe-bg-right.not-running{background:var(--swipe-orange);}
+.swipe-icon{font-size:22px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.swipe-icon span{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;opacity:0.85;}
+
+/* The draggable card */
+.player-card{
+  position:relative;z-index:2;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 14px;
+  display:flex;align-items:center;gap:10px;
+  transition:transform 0.18s ease, box-shadow 0.18s;
+  box-shadow:var(--shadow-sm);
+  touch-action:pan-y;
+  will-change:transform;
+  user-select:none;
+}
+.player-card.running{background:var(--running-bg);border-color:var(--running-border);}
+.player-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border2);border-radius:3px 0 0 3px;transition:all 0.2s;}
+.player-card.running::before{background:var(--accent);box-shadow:0 0 6px var(--accent-glow);}
+.player-card.is-pr::before{background:var(--warn-bright);}
+
+/* Card content */
+.player-num{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--muted2);min-width:18px;text-align:center;}
+.player-info{flex:1;min-width:0;}
+.player-name-row{display:flex;align-items:center;gap:5px;min-width:0;}
+.player-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pr-badge{background:var(--warn-dim);color:var(--warn);border:1px solid var(--warn-border);border-radius:5px;font-size:9px;font-weight:700;padding:1px 5px;flex-shrink:0;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite;flex-shrink:0;}
+.player-sub{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;}
+.player-time{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text2);min-width:62px;text-align:right;}
+.player-card.running .player-time{color:var(--accent);}
+
+.start-btn{width:44px;height:44px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;box-shadow:0 2px 8px var(--accent-glow);}
+.start-btn:hover{background:var(--accent-light);transform:scale(1.06);}
+.start-btn:active{transform:scale(0.93);}
+.stop-btn{width:44px;height:44px;border-radius:12px;border:none;background:var(--danger);color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;box-shadow:0 2px 8px rgba(217,48,37,0.2);}
+.stop-btn:hover{background:#c0392b;transform:scale(1.06);}
+.stop-btn:active{transform:scale(0.93);}
+.hist-btn{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+.hist-btn:hover{background:var(--blue-dim);color:var(--blue);border-color:var(--blue-border);}
+.hl{background:rgba(26,158,92,0.18);border-radius:3px;}
+
+/* Swipe feedback flash */
+@keyframes flashGreen{0%{background:rgba(26,158,92,0.18);}100%{background:var(--surface);}}
+@keyframes flashRed{0%{background:rgba(217,48,37,0.12);}100%{background:var(--surface);}}
+@keyframes flashOrange{0%{background:rgba(245,158,11,0.14);}100%{background:var(--surface);}}
+.flash-green{animation:flashGreen 0.4s ease;}
+.flash-red{animation:flashRed 0.4s ease;}
+.flash-orange{animation:flashOrange 0.4s ease;}
+
+/* REPORT */
+.report-wrap{padding:12px;}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:1.5px;color:var(--text);margin-bottom:9px;margin-top:20px;}
+.section-title:first-child{margin-top:0;}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--bg2);font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);}
+td{padding:11px 12px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg2);}
+.td-rank{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--muted);}
+.td-name{font-weight:600;color:var(--text);}
+.td-mono{font-family:'DM Mono',monospace;font-weight:500;color:var(--text2);}
+.clr-acc{color:var(--accent);}.clr-warn{color:var(--warn-bright);}.clr-red{color:var(--danger);}.clr-muted{color:var(--muted);}
+.fastest-banner{background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(245,158,11,0.03));border:1px solid var(--warn-border);border-radius:var(--radius);padding:13px 15px;margin-bottom:12px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow-sm);}
+.fb-trophy{font-size:24px;}
+.fb-label{font-size:10px;color:var(--warn-bright);text-transform:uppercase;letter-spacing:1px;font-weight:700;}
+.fb-name{font-size:16px;font-weight:700;color:var(--text);margin-top:2px;}
+.fb-time{font-family:'DM Mono',monospace;font-size:19px;color:var(--warn-bright);margin-left:auto;font-weight:500;}
+
+/* PROFILE */
+.profile-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 14px 14px;box-shadow:var(--shadow-sm);}
+.profile-back-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.profile-name{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;line-height:1.05;color:var(--text);}
+.profile-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;}
+.kpi-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:11px 8px;text-align:center;box-shadow:var(--shadow-sm);}
+.kpi-val{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--text2);}
+.kpi-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
+.profile-body{padding:12px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm);}
+.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;}
+.canvas-wrap{position:relative;width:100%;}
+.trend-badge{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;font-family:'DM Mono',monospace;}
+.trend-up{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);}
+.trend-down{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger-border);}
+.trend-neu{background:var(--surface3);color:var(--muted);border:1px solid var(--border);}
+.best-line{display:flex;align-items:center;gap:8px;background:var(--warn-dim);border:1px solid var(--warn-border);border-radius:10px;padding:9px 13px;margin-bottom:10px;font-size:13px;}
+
+/* RESET actions in profile */
+.reset-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:10px;box-shadow:var(--shadow-sm);}
+.reset-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:10px;}
+.reset-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* SESSION RESET in history table */
+.sess-reset-btn{background:none;border:none;color:var(--muted2);font-size:13px;cursor:pointer;padding:2px 4px;border-radius:5px;transition:all 0.15s;}
+.sess-reset-btn:hover{color:var(--danger);background:var(--danger-dim);}
+
+/* ROSTER */
+.roster-wrap{padding:11px;}
+.roster-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:9px;margin-bottom:7px;box-shadow:var(--shadow-sm);}
+.roster-num{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--muted2);min-width:18px;}
+.roster-info{flex:1;min-width:0;}
+.roster-name{font-size:14px;font-weight:600;color:var(--text);}
+.roster-pr{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;}
+.name-input-edit{flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 10px;outline:none;box-shadow:0 0 0 3px var(--accent-dim);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:200;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:22px 22px 0 0;padding:20px 18px 36px;width:100%;max-width:460px;animation:slideUp 0.22s ease;box-shadow:0 -8px 32px rgba(0,0,0,0.12);}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1.5px;color:var(--text);margin-bottom:14px;}
+.modal-actions{display:flex;gap:9px;margin-top:18px;}
+.modal-actions .btn{flex:1;justify-content:center;}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.summary-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+.summary-val{font-family:'DM Mono',monospace;font-size:19px;font-weight:500;color:var(--accent);}
+.summary-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:3px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--text);color:#fff;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;z-index:300;transition:transform 0.26s ease;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,0.2);pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--accent);}
+.toast.warn{background:var(--warn-bright);}
+.toast.info{background:var(--blue);}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;line-height:1.6;}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:12px 0;}
 </style>
 </head>
 <body>
+
 <header>
-  <div class="brand">Coach Timer</div>
-  <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
-  <div id="menu" class="menu" role="menu">
-    <button class="btn btn-gray" onclick="nav('timers');toggleMenu()">Timers</button>
-    <button class="btn btn-gray" onclick="viewReport();toggleMenu()">Report</button>
-    <button class="btn btn-gray" onclick="nav('roster');toggleMenu()">Roster</button>
-    <button class="btn btn-gray" onclick="viewAllHistories();toggleMenu()">Histories</button>
-    <button class="btn btn-green" onclick="closeSession();toggleMenu()">Close Session</button>
+  <div class="brand">CT</div>
+  <div class="session-pill" id="session-pill"><div class="session-dot"></div><span id="session-pill-text">No Session</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="tab-timers" onclick="switchView('timers')">Timers</button>
+    <button class="nav-tab" id="tab-report" onclick="switchView('report')">Report</button>
+    <button class="nav-tab" id="tab-roster" onclick="switchView('roster')">Roster</button>
   </div>
+  <button class="btn btn-warn btn-xs" id="close-btn" onclick="openCloseModal()" disabled>Close</button>
 </header>
-<main id="main"></main>
+
+<!-- TIMERS -->
+<div id="view-timers" class="view active">
+  <div class="timer-toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="search-input" type="search" placeholder="Find player…" oninput="renderTimers()" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn btn-green btn-xs" onclick="startAll()">▶ All</button>
+    <button class="btn btn-red btn-xs" onclick="stopAll()">■ All</button>
+    <button class="btn btn-ghost btn-xs" onclick="promptNewSession()">+ New</button>
+  </div>
+  <div class="swipe-hint">
+    <span>← Swipe right to start</span>
+    <span style="margin:0 6px;color:var(--border2)">·</span>
+    <span>Swipe left to stop/reset →</span>
+  </div>
+  <div id="stats-row" class="stats-row"></div>
+  <div id="session-banner" class="session-banner closed">
+    <div class="sb-dot"></div>
+    <div class="sb-text" id="sb-text">No active session — tap "+ New" to begin</div>
+    <div class="sb-dur" id="sb-dur"></div>
+  </div>
+  <div id="player-list" class="player-list"></div>
+</div>
+
+<!-- REPORT -->
+<div id="view-report" class="view"><div class="report-wrap" id="report-content"></div></div>
+
+<!-- PROFILE -->
+<div id="view-profile" class="view"><div id="profile-content"></div></div>
+
+<!-- ROSTER -->
+<div id="view-roster" class="view">
+  <div class="roster-wrap">
+    <div id="roster-content"></div>
+    <div style="margin-top:10px;"><button class="btn btn-green btn-sm" onclick="addPlayer()">+ Add Player</button></div>
+  </div>
+</div>
+
+<!-- CLOSE MODAL -->
+<div class="modal-overlay" id="close-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="close-modal-title">Close Session</div>
+    <div id="close-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-md" onclick="closeModal('close-modal')">Cancel</button>
+      <button class="btn btn-green btn-md" id="close-confirm-btn" onclick="confirmCloseSession()">Save & Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW SESSION MODAL -->
+<div class="modal-overlay" id="new-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Start New Session?</div>
+    <p style="color:var(--text2);font-size:14px;line-height:1.55;">Reset all timers and begin fresh.<br><span id="new-modal-warn" style="color:var(--danger);font-weight:700;"></span></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-md" onclick="closeModal('new-modal')">Cancel</button>
+      <button class="btn btn-green btn-md" onclick="confirmNewSession()">Start Fresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PLAYER MODAL -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="reset-modal-title">Reset Player</div>
+    <div id="reset-modal-body"></div>
+    <div class="modal-actions" id="reset-modal-actions"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-
-function toggleMenu(){ document.getElementById('menu').classList.toggle('show'); }
-document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(!m) return; if(!m.contains(e.target) && !e.target.closest('.hamburger')) m.classList.remove('show'); });
-
-const STORAGE_KEY="ct-v3-7"; const HISTORY_KEY="ct-hist-v3-7";
-function msToClock(ms){
-  if(!Number.isFinite(ms)||ms<=0) return "0:00";
-  const totalSec=Math.floor(ms/1000);
-  const m=Math.floor(totalSec/60);
-  const s=totalSec%60;
-  return m+":"+(s<10?"0"+s:s);
-}
-
-const defaultNames=[
- "Joan Alexander Cicua Lara","Cristobal Correa","Leonardo Ferrer","Guilherme Gomes","Esteban Gomez","Marcelo Gomez",
- "Daniel Hernandez","Ignacio Herrera","Bernardo Kabbach","Dev Kumar","AMITAI LISANI","Cristobal Lander","Pedro Ramos",
- "Juan Diego Rodriguez Alvizu","Tharun Sathish","Aaron Shakibi","Nicolas Suarez","Santiago"
+// ── DATA ──────────────────────────────────────────────
+const SK='ct-v4-3', HK='ct-hist-v4-3';
+const DEFAULT_NAMES=[
+  "David Bendjoya","Leonardo Ferrer","Isaac Gerson","Guilherme Gomes",
+  "Esteban Gomez","Marcelo Gomez","Ignacio Herrera","Bernardo Kabbach",
+  "Cristobal Lander","Nicolas Nielsen","Felipe Olmos Coluccio","Pedro Ramos",
+  "Juan Diego Rodriguez Alvizu","Andreh Salinas","Tharun Sathish","Aaron Shakibi",
+  "Ryan","Santi","Matheo"
 ];
-function makeDefault(){ return defaultNames.map((n,i)=>({id:i+1,name:n,timeMs:0,running:false})); }
+function makeDefault(){return DEFAULT_NAMES.map((n,i)=>({id:i+1,name:n,timeMs:0,running:false,startAt:0}));}
 
-let state=(function(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||null}catch(e){return null}})()
-      || { players: makeDefault(), view: "timers", editingId: null };
-let history=(function(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY))||{}}catch(e){return {}}})();
+let state=(()=>{try{return JSON.parse(localStorage.getItem(SK))||null;}catch{return null;}})()
+  ||{players:makeDefault(),view:'timers',editingId:null,sessionOpen:false,sessionStart:null,profileFrom:'timers'};
+if(state.sessionOpen===undefined)state.sessionOpen=false;
+if(state.sessionStart===undefined)state.sessionStart=null;
+if(state.profileFrom===undefined)state.profileFrom='timers';
 
-function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-function saveHist(){ localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+let history=(()=>{try{return JSON.parse(localStorage.getItem(HK))||{};}catch{return {};}})();
+function save(){localStorage.setItem(SK,JSON.stringify(state));}
+function saveHist(){localStorage.setItem(HK,JSON.stringify(history));}
 
-function nav(v){ state.view=v; saveState(); render(); }
-function newSession(){ state.players=state.players.map(p=>({...p,timeMs:0,running:false})); saveState(); render(); }
-function addPlayer(){ const id=state.players.length?Math.max(...state.players.map(p=>p.id))+1:1; state.players.push({id,name:"New Player",timeMs:0,running:false}); saveState(); render(); }
-function deletePlayer(id){ state.players=state.players.filter(p=>p.id!==id); saveState(); render(); }
-function editPlayer(id){ state.editingId=id; state.view='roster'; saveState(); render(); setTimeout(()=>{const el=document.getElementById('edit-input-'+id); if(el) el.focus();},30); }
-function savePlayer(id){ const el=document.getElementById('edit-input-'+id); const p=state.players.find(x=>x.id===id); if(p&&el){ p.name=el.value.trim()||p.name; } state.editingId=null; saveState(); render(); }
-function cancelEdit(){ state.editingId=null; saveState(); render(); }
-
-function start(id){ const p=state.players.find(x=>x.id===id); if(p){ p.running=true; p.startAt=Date.now()-(p.timeMs||0); saveState(); } }
-function stop(id){ const p=state.players.find(x=>x.id===id); if(p&&p.running){ p.timeMs=Date.now()-p.startAt; p.running=false; saveState(); render(); } }
-function startAll(){ state.players.forEach(p=>{ if(!p.running){ p.running=true; p.startAt=Date.now()-(p.timeMs||0); } }); saveState(); render(); }
-function stopAll(){ state.players.forEach(p=>{ if(p.running){ p.timeMs=Date.now()-p.startAt; p.running=false; } }); saveState(); render(); }
-
-function fastestId(){ const arr=state.players.filter(p=>p.timeMs>0&&!p.running); if(!arr.length)return null; return arr.reduce((a,b)=>a.timeMs<b.timeMs?a:b).id; }
-
-function viewReport(){ state.view='report'; saveState(); render(); }
-function viewAllHistories(){ state.view='allhist'; saveState(); render(); }
-function viewHistory(id){ state.view={name:'history', id}; saveState(); render(); }
-
-function closeSession(){ const date=new Date().toISOString(); state.players.forEach(p=>{ const rec={date,timeMs:p.timeMs||0}; if(!history[p.id]) history[p.id]=[]; history[p.id].push(rec); }); saveHist(); alert('Session saved.'); newSession(); }
-function clearAllHistory(){ if(confirm('Clear ALL history?')){ history={}; saveHist(); alert('Cleared.'); } }
-
-function renderTimers(){
-  const c=document.createElement('div'); c.className='list';
-  state.players.forEach((p,i)=>{
-    const card=document.createElement('div'); card.className='card'+(p.running?' running':'');
-    const row=document.createElement('div'); row.className='row-top';
-    const num=document.createElement('div'); num.style.fontSize='14px'; num.style.color='#6b7280'; num.textContent=String(i+1);
-    const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
-    const actions=document.createElement('div'); actions.className='actions';
-    const startBtn=document.createElement('button'); startBtn.className='btn btn-green'; startBtn.textContent='▶'; startBtn.onclick=()=>start(p.id);
-    const stopBtn=document.createElement('button'); stopBtn.className='btn btn-red'; stopBtn.textContent='⏸'; stopBtn.onclick=()=>stop(p.id);
-    actions.appendChild(p.running? stopBtn : startBtn);
-    const editBtn=document.createElement('button'); editBtn.className='btn btn-gray'; editBtn.textContent='✏️'; editBtn.onclick=()=>editPlayer(p.id);
-    const delBtn=document.createElement('button'); delBtn.className='btn btn-red'; delBtn.textContent='✕'; delBtn.onclick=()=>deletePlayer(p.id);
-    row.appendChild(num); row.appendChild(name); row.appendChild(actions); row.appendChild(editBtn); row.appendChild(delBtn);
-    const time=document.createElement('div'); time.className='time'; time.textContent=msToClock(p.running?(Date.now()-p.startAt):p.timeMs);
-    card.appendChild(row); card.appendChild(time); c.appendChild(card);
-  });
-  const tools=document.createElement('div'); tools.className='toolbar';
-  const add=document.createElement('button'); add.className='btn btn-green'; add.textContent='+ Add Player'; add.onclick=addPlayer;
-  const newBtn=document.createElement('button'); newBtn.className='btn btn-gray'; newBtn.textContent='New Session'; newBtn.onclick=newSession;
-  const startAllBtn=document.createElement('button'); startAllBtn.className='btn btn-green'; startAllBtn.textContent='Start All'; startAllBtn.onclick=startAll;
-  const stopAllBtn=document.createElement('button'); stopAllBtn.className='btn btn-red'; stopAllBtn.textContent='Stop All'; stopAllBtn.onclick=stopAll;
-  tools.appendChild(add); tools.appendChild(newBtn); tools.appendChild(startAllBtn); tools.appendChild(stopAllBtn); c.appendChild(tools);
-  return c;
+// ── UTILS ─────────────────────────────────────────────
+function msToClock(ms){
+  if(!ms||ms<=0)return'0:00';
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),r=s%60;
+  return m+':'+(r<10?'0':'')+r;
+}
+function liveMs(p){return p.running?(Date.now()-p.startAt):p.timeMs;}
+function hasTimes(){return state.players.some(p=>p.timeMs>0);}
+function getPB(pid){const r=(history[pid]||[]).filter(x=>x.timeMs>0);return r.length?Math.min(...r.map(x=>x.timeMs)):null;}
+function getPrev(pid){const r=(history[pid]||[]).filter(x=>x.timeMs>0);return r.length>=2?r[r.length-2].timeMs:null;}
+function getImprove(pid,cur){const p=getPrev(pid);return(p&&cur)?((p-cur)/p)*100:null;}
+function teamAvg(){const w=state.players.filter(p=>p.timeMs>0);return w.length?w.reduce((a,p)=>a+p.timeMs,0)/w.length:0;}
+function elapsed(){
+  if(!state.sessionStart)return'';
+  const ms=Date.now()-state.sessionStart;
+  const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000);
+  return m+'m '+(s<10?'0':'')+s+'s';
 }
 
-function renderRoster(){
-  const c=document.createElement('div'); c.className='list';
-  state.players.forEach((p,i)=>{
-    const card=document.createElement('div'); card.className='card';
-    if(state.editingId===p.id){
-      const inp=document.createElement('input'); inp.id='edit-input-'+p.id; inp.className='name-input'; inp.value=p.name;
-      const save=document.createElement('button'); save.className='btn btn-green'; save.textContent='Save'; save.onclick=()=>savePlayer(p.id);
-      const cancel=document.createElement('button'); cancel.className='btn btn-gray'; cancel.textContent='Cancel'; cancel.onclick=cancelEdit;
-      card.appendChild(inp); card.appendChild(save); card.appendChild(cancel);
-    } else {
-      const row=document.createElement('div'); row.className='row-top';
-      const num=document.createElement('div'); num.style.fontSize='14px'; num.style.color='#6b7280'; num.textContent=String(i+1);
-      const name=document.createElement('div'); name.className='name'; name.textContent=p.name;
-      const edit=document.createElement('button'); edit.className='btn btn-gray'; edit.textContent='Edit'; edit.onclick=()=>editPlayer(p.id);
-      const del=document.createElement('button'); del.className='btn btn-red'; del.textContent='Delete'; del.onclick=()=>deletePlayer(p.id);
-      row.appendChild(num); row.appendChild(name); row.appendChild(edit); row.appendChild(del); card.appendChild(row);
+// ── SESSION UI ────────────────────────────────────────
+function refreshSessionUI(){
+  const pill=document.getElementById('session-pill');
+  const pillTxt=document.getElementById('session-pill-text');
+  const banner=document.getElementById('session-banner');
+  const sbText=document.getElementById('sb-text');
+  const sbDur=document.getElementById('sb-dur');
+  const closeBtn=document.getElementById('close-btn');
+  const anyRunning=state.players.some(p=>p.running);
+  const isLive=state.sessionOpen||anyRunning||hasTimes();
+
+  if(state.sessionOpen||anyRunning){
+    pill.className='session-pill live';pillTxt.textContent='Live';
+    banner.className='session-banner open';
+    sbText.textContent='Session in progress';sbDur.textContent=elapsed();
+  } else if(hasTimes()){
+    pill.className='session-pill live';pillTxt.textContent='Unsaved';
+    banner.className='session-banner open';
+    sbText.textContent='Times recorded — close to save';sbDur.textContent='';
+  } else {
+    pill.className='session-pill';pillTxt.textContent='No Session';
+    banner.className='session-banner closed';
+    sbText.textContent='No active session — tap "+ New" to begin';sbDur.textContent='';
+  }
+  closeBtn.disabled=!isLive;
+  closeBtn.className='btn btn-xs '+(isLive?'btn-warn':'btn-ghost');
+}
+
+function promptNewSession(){
+  document.getElementById('new-modal-warn').textContent=(hasTimes()&&state.sessionOpen)?'Unsaved times will be lost!':'';
+  document.getElementById('new-modal').classList.add('show');
+}
+function confirmNewSession(){
+  closeModal('new-modal');_stopAll(true);
+  state.players=state.players.map(p=>({...p,timeMs:0,running:false,startAt:0}));
+  state.sessionOpen=true;state.sessionStart=Date.now();
+  save();renderTimers();toast('Session started','success');
+}
+function openCloseModal(){
+  if(!hasTimes()&&!state.players.some(p=>p.running)&&!state.sessionOpen){toast('Nothing to close yet','warn');return;}
+  _stopAll(true);
+  const dated=state.players.filter(p=>p.timeMs>0);
+  const body=document.getElementById('close-modal-body');
+  const title=document.getElementById('close-modal-title');
+  const confirmBtn=document.getElementById('close-confirm-btn');
+  if(!dated.length){
+    title.textContent='Close Session';
+    body.innerHTML='<p style="color:var(--text2);font-size:14px;">No times were recorded this session.</p>';
+    confirmBtn.textContent='Close Anyway';
+  } else {
+    const avg=dated.reduce((a,p)=>a+p.timeMs,0)/dated.length;
+    const fastest=dated.reduce((a,b)=>a.timeMs<b.timeMs?a:b);
+    title.textContent='Save Session';confirmBtn.textContent='Save & Close';
+    body.innerHTML=`
+      <div class="summary-grid">
+        <div class="summary-card"><div class="summary-val">${dated.length}</div><div class="summary-lbl">Players Timed</div></div>
+        <div class="summary-card"><div class="summary-val">${msToClock(avg)}</div><div class="summary-lbl">Team Avg</div></div>
+        <div class="summary-card"><div class="summary-val">${msToClock(fastest.timeMs)}</div><div class="summary-lbl">Best Time</div></div>
+        <div class="summary-card"><div class="summary-val">${fastest.name.split(' ')[0]}</div><div class="summary-lbl">Fastest</div></div>
+      </div>
+      <p style="color:var(--muted);font-size:13px;line-height:1.5;">Save these times to each player's history and reset for next session.</p>`;
+  }
+  document.getElementById('close-modal').classList.add('show');
+}
+function confirmCloseSession(){
+  const date=new Date().toISOString();
+  state.players.forEach(p=>{if(!history[p.id])history[p.id]=[];history[p.id].push({date,timeMs:p.timeMs||0});});
+  saveHist();
+  state.players=state.players.map(p=>({...p,timeMs:0,running:false,startAt:0}));
+  state.sessionOpen=false;state.sessionStart=null;
+  save();closeModal('close-modal');renderTimers();toast('Session saved ✓','success');
+}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// ── TIMER ACTIONS ─────────────────────────────────────
+function start(id){
+  const p=state.players.find(x=>x.id===id);
+  if(p&&!p.running){
+    if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
+    p.running=true;p.startAt=Date.now()-(p.timeMs||0);save();
+  }
+}
+function stop(id){
+  const p=state.players.find(x=>x.id===id);
+  if(p&&p.running){p.timeMs=Date.now()-p.startAt;p.running=false;save();renderTimers();}
+}
+function startAll(){
+  if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
+  state.players.forEach(p=>{if(!p.running){p.running=true;p.startAt=Date.now()-(p.timeMs||0);}});
+  save();renderTimers();
+}
+function stopAll(){_stopAll(false);renderTimers();}
+function _stopAll(silent){
+  state.players.forEach(p=>{if(p.running){p.timeMs=Date.now()-p.startAt;p.running=false;}});
+  save();if(!silent)renderTimers();
+}
+
+// Reset a single player's CURRENT session timer only (not history)
+function resetPlayerTimer(id){
+  const p=state.players.find(x=>x.id===id);
+  if(!p)return;
+  if(p.running){p.timeMs=0;p.running=false;p.startAt=0;}
+  else{p.timeMs=0;p.startAt=0;}
+  save();renderTimers();toast(`${p.name.split(' ')[0]}'s timer reset`,'info');
+}
+
+// ── RESET SYSTEM ──────────────────────────────────────
+function openResetModal(pid){
+  const p=state.players.find(x=>x.id===pid);if(!p)return;
+  const recs=(history[pid]||[]).filter(r=>r.timeMs>0);
+  const hasCurrentTime=p.timeMs>0||p.running;
+  const hasHistory=recs.length>0;
+
+  document.getElementById('reset-modal-title').textContent=`Reset — ${p.name.split(' ')[0]}`;
+  document.getElementById('reset-modal-body').innerHTML=`
+    <p style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:14px;">
+      Choose what to reset for <strong>${p.name}</strong>:
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:12px 14px;">
+        <div style="font-weight:700;font-size:13px;">⏱ Today's Timer Only</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Clears the current session timer. History is kept.</div>
+        <div style="font-size:12px;color:${hasCurrentTime?'var(--accent)':'var(--muted)'};margin-top:4px;font-family:'DM Mono',monospace;">${hasCurrentTime?'Current time: '+msToClock(liveMs(p)):'No time recorded yet'}</div>
+      </div>
+      ${hasHistory?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:12px 14px;">
+        <div style="font-weight:700;font-size:13px;">📅 One Specific Session</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Delete a single session from history.</div>
+        <select id="reset-session-select" style="margin-top:8px;width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:7px 10px;font-size:13px;color:var(--text);outline:none;">
+          ${recs.map((r,i)=>`<option value="${i}">Session ${i+1} — ${new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} — ${msToClock(r.timeMs)}</option>`).join('')}
+        </select>
+      </div>`:''}
+      <div style="background:var(--danger-dim);border:1px solid var(--danger-border);border-radius:11px;padding:12px 14px;">
+        <div style="font-weight:700;font-size:13px;color:var(--danger);">🗑 All History for This Player</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Wipes all ${recs.length} saved session${recs.length!==1?'s':''} permanently. Cannot be undone.</div>
+      </div>
+    </div>`;
+
+  document.getElementById('reset-modal-actions').innerHTML=`
+    <button class="btn btn-ghost btn-md" onclick="closeModal('reset-modal')" style="flex:1;">Cancel</button>
+    ${hasCurrentTime?`<button class="btn btn-orange btn-md" onclick="resetPlayerTimer(${pid});closeModal('reset-modal')" style="flex:1;">Reset Timer</button>`:''}
+    ${hasHistory?`<button class="btn btn-ghost btn-md" onclick="deleteOneSession(${pid});closeModal('reset-modal')" style="flex:1;">Del Session</button>`:''}
+    <button class="btn btn-red btn-md" onclick="resetAllPlayerHistory(${pid});closeModal('reset-modal')" style="flex:1;">Clear All</button>`;
+
+  document.getElementById('reset-modal').classList.add('show');
+}
+
+function deleteOneSession(pid){
+  const sel=document.getElementById('reset-session-select');
+  if(!sel)return;
+  const idx=parseInt(sel.value);
+  const recs=(history[pid]||[]).filter(r=>r.timeMs>0);
+  const p=state.players.find(x=>x.id===pid);
+  if(!recs[idx])return;
+  // remove that specific session
+  const allRecs=history[pid]||[];
+  // find and remove the matching record
+  const target=recs[idx];
+  const i=allRecs.findIndex(r=>r.date===target.date&&r.timeMs===target.timeMs);
+  if(i>=0)allRecs.splice(i,1);
+  history[pid]=allRecs;
+  saveHist();
+  toast(`Session deleted`,'info');
+  if(state.view==='profile')renderProfile(pid);
+}
+
+function resetAllPlayerHistory(pid){
+  const p=state.players.find(x=>x.id===pid);
+  history[pid]=[];
+  if(p){p.timeMs=0;p.running=false;p.startAt=0;}
+  localStorage.setItem(HK, JSON.stringify(history));
+  save();
+  toast(`${p?p.name.split(' ')[0]:'Player'}'s history cleared`,'info');
+  if(state.view==='profile')renderProfile(pid);
+  else renderTimers();
+}
+
+// ── SWIPE GESTURES ────────────────────────────────────
+const SWIPE_THRESHOLD = 72;   // px needed to trigger action
+const SWIPE_MAX = 110;         // max drag distance
+
+function attachSwipe(cardEl, pid){
+  let startX=0, startY=0, currentX=0, dragging=false, axis=null;
+  const bgLeft=cardEl.parentElement.querySelector('.swipe-bg-left');
+  const bgRight=cardEl.parentElement.querySelector('.swipe-bg-right');
+
+  function onStart(e){
+    const t=e.touches?e.touches[0]:e;
+    startX=t.clientX; startY=t.clientY;
+    currentX=0; dragging=true; axis=null;
+    cardEl.style.transition='none';
+  }
+  function onMove(e){
+    if(!dragging)return;
+    const t=e.touches?e.touches[0]:e;
+    const dx=t.clientX-startX;
+    const dy=t.clientY-startY;
+    // determine scroll vs swipe axis on first significant move
+    if(!axis){
+      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>6)axis='x';
+      else if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>6)axis='y';
+      else return;
     }
-    c.appendChild(card);
-  });
-  const tools=document.createElement('div'); tools.className='toolbar';
-  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
-  const add=document.createElement('button'); add.className='btn btn-green'; add.textContent='+ Add Player'; add.onclick=addPlayer;
-  tools.appendChild(back); tools.appendChild(add); c.appendChild(tools);
-  return c;
+    if(axis==='y')return; // let page scroll
+    e.preventDefault();
+    // clamp
+    currentX=Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx));
+    cardEl.style.transform=`translateX(${currentX}px)`;
+
+    // update bg icons dynamically
+    const p=state.players.find(x=>x.id===pid);
+    if(currentX>0){
+      // swiping right → start (green)
+      bgLeft.style.opacity=Math.min(1,currentX/SWIPE_THRESHOLD);
+      bgRight.style.opacity=0;
+      // show correct icon
+      bgLeft.innerHTML=`<div class="swipe-icon">${p&&p.running?'■':'▶'}<span>${p&&p.running?'Stop':'Start'}</span></div>`;
+    } else {
+      // swiping left → stop if running, reset if not
+      bgLeft.style.opacity=0;
+      bgRight.style.opacity=Math.min(1,-currentX/SWIPE_THRESHOLD);
+      const isRunning=p&&p.running;
+      bgRight.className='swipe-bg swipe-bg-right '+(isRunning?'is-running':'not-running');
+      bgRight.innerHTML=`<div class="swipe-icon">${isRunning?'■':'↺'}<span>${isRunning?'Stop':'Reset'}</span></div>`;
+    }
+  }
+  function onEnd(){
+    if(!dragging||axis!=='x'){dragging=false;axis=null;return;}
+    dragging=false;axis=null;
+    cardEl.style.transition='transform 0.2s ease';
+    const p=state.players.find(x=>x.id===pid);
+
+    if(currentX >= SWIPE_THRESHOLD){
+      // swipe right → start (or stop if running)
+      triggerFlash(cardEl, p&&p.running?'red':'green');
+      if(p&&p.running) stop(pid); else start(pid);
+    } else if(currentX <= -SWIPE_THRESHOLD){
+      // swipe left
+      if(p&&p.running){
+        triggerFlash(cardEl,'red');stop(pid);
+      } else {
+        // reset timer for this player (non-destructive — just clears today's time)
+        triggerFlash(cardEl,'orange');resetPlayerTimer(pid);
+      }
+    }
+
+    // snap back
+    cardEl.style.transform='translateX(0)';
+    bgLeft.style.opacity=0;
+    bgRight.style.opacity=0;
+    currentX=0;
+  }
+
+  cardEl.addEventListener('touchstart',onStart,{passive:true});
+  cardEl.addEventListener('touchmove',onMove,{passive:false});
+  cardEl.addEventListener('touchend',onEnd);
+  // mouse fallback for desktop testing
+  cardEl.addEventListener('mousedown',onStart);
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onEnd);
 }
 
+function triggerFlash(el,type){
+  el.classList.remove('flash-green','flash-red','flash-orange');
+  void el.offsetWidth;
+  el.classList.add('flash-'+type);
+  setTimeout(()=>el.classList.remove('flash-green','flash-red','flash-orange'),400);
+}
+
+// ── RENDER: TIMERS ────────────────────────────────────
+function renderTimers(){
+  const q=document.getElementById('search-input').value.toLowerCase().trim();
+  const statsRow=document.getElementById('stats-row');
+  const list=document.getElementById('player-list');
+
+  const running=state.players.filter(p=>p.running).length;
+  const timed=state.players.filter(p=>p.timeMs>0).length;
+  const avg=teamAvg();
+  const ftimes=state.players.filter(p=>p.timeMs>0);
+  const best=ftimes.length?Math.min(...ftimes.map(p=>p.timeMs)):0;
+  statsRow.innerHTML=`
+    <div class="stat-pill"><div class="stat-val" style="color:${running?'var(--accent)':'var(--muted)'}">${running}</div><div class="stat-lbl">Running</div></div>
+    <div class="stat-pill"><div class="stat-val">${timed}</div><div class="stat-lbl">Timed</div></div>
+    <div class="stat-pill"><div class="stat-val">${avg?msToClock(avg):'—'}</div><div class="stat-lbl">Avg</div></div>
+    <div class="stat-pill"><div class="stat-val clr-warn">${best?msToClock(best):'—'}</div><div class="stat-lbl">Best</div></div>`;
+
+  refreshSessionUI();
+
+  let players=[...state.players];
+  if(q)players=players.filter(p=>p.name.toLowerCase().includes(q));
+  players=[...players.filter(p=>p.running),...players.filter(p=>!p.running)];
+
+  list.innerHTML='';
+  if(!players.length){list.innerHTML='<div class="empty-state">No players found</div>';return;}
+
+  players.forEach(p=>{
+    const ms=liveMs(p);
+    const pb=getPB(p.id);
+    const isPR=pb&&p.timeMs>0&&!p.running&&p.timeMs<=pb;
+    const imp=getImprove(p.id,p.timeMs);
+    const idx=state.players.indexOf(p)+1;
+
+    let subHtml='';
+    if(pb)subHtml+=`PR ${msToClock(pb)}`;
+    if(imp!==null){const up=imp>0;subHtml+=(subHtml?' · ':'')+`<span style="color:${up?'var(--accent)':'var(--danger)'}">${up?'↑':'↓'}${Math.abs(imp).toFixed(1)}% vs last</span>`;}
+
+    let dispName=p.name;
+    if(q){const i=p.name.toLowerCase().indexOf(q);if(i>=0)dispName=p.name.slice(0,i)+`<span class="hl">${p.name.slice(i,i+q.length)}</span>`+p.name.slice(i+q.length);}
+
+    // Wrapper (clip container)
+    const wrapper=document.createElement('div');
+    wrapper.className='swipe-item';
+
+    // bg layers
+    const bgL=document.createElement('div');bgL.className='swipe-bg swipe-bg-left';bgL.style.opacity=0;
+    bgL.innerHTML=`<div class="swipe-icon">▶<span>Start</span></div>`;
+    const bgR=document.createElement('div');bgR.className='swipe-bg swipe-bg-right '+(p.running?'is-running':'not-running');bgR.style.opacity=0;
+    bgR.innerHTML=`<div class="swipe-icon">${p.running?'■':'↺'}<span>${p.running?'Stop':'Reset'}</span></div>`;
+
+    const card=document.createElement('div');
+    card.className='player-card'+(p.running?' running':'')+(isPR?' is-pr':'');
+    card.innerHTML=`
+      <div class="player-num">${idx}</div>
+      <div class="player-info">
+        <div class="player-name-row">
+          <span class="player-name">${dispName}</span>
+          ${isPR?'<span class="pr-badge">🏅 PR</span>':''}
+          ${p.running?'<span class="live-dot"></span>':''}
+        </div>
+        ${subHtml?`<div class="player-sub">${subHtml}</div>`:''}
+      </div>
+      <div class="player-time">${msToClock(ms)}</div>
+      <button class="hist-btn" onclick="openProfile(${p.id},'timers')" title="Profile">📈</button>
+      ${p.running
+        ?`<button class="stop-btn" onclick="stop(${p.id})">■</button>`
+        :`<button class="start-btn" onclick="start(${p.id})">▶</button>`}`;
+
+    wrapper.appendChild(bgL);
+    wrapper.appendChild(bgR);
+    wrapper.appendChild(card);
+    list.appendChild(wrapper);
+
+    attachSwipe(card, p.id);
+  });
+}
+
+// ── RENDER: REPORT ────────────────────────────────────
 function renderReport(){
-  const c=document.createElement('div');
-  const tools=document.createElement('div'); tools.className='toolbar';
-  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
-  const clear=document.createElement('button'); clear.className='btn btn-red'; clear.textContent='Clear All History'; clear.onclick=clearAllHistory;
-  tools.appendChild(back); tools.appendChild(clear); c.appendChild(tools);
+  const wrap=document.getElementById('report-content');wrap.innerHTML='';
+  const withTime=state.players.filter(p=>p.timeMs>0||p.running);
+  const sorted=[...withTime].sort((a,b)=>liveMs(a)-liveMs(b));
+  if(sorted.length){
+    const f=sorted[0];
+    wrap.innerHTML+=`<div class="fastest-banner"><div class="fb-trophy">🏆</div><div><div class="fb-label">Today's Leader</div><div class="fb-name">${f.name}</div></div><div class="fb-time">${msToClock(liveMs(f))}</div></div>`;
+    const medals=['🥇','🥈','🥉'];
+    const rows=sorted.map((p,i)=>{
+      const ms=liveMs(p);const pb=getPB(p.id);const imp=getImprove(p.id,p.timeMs);
+      let impH='<span class="clr-muted">—</span>';
+      if(imp!==null){const up=imp>0;impH=`<span class="${up?'clr-acc':'clr-red'}">${up?'↑':'↓'}${Math.abs(imp).toFixed(1)}%</span>`;}
+      return`<tr><td class="td-rank">${medals[i]||(i+1)}</td><td class="td-name">${p.name}</td><td class="td-mono">${msToClock(ms)}</td><td class="td-mono clr-warn">${pb?msToClock(pb):'—'}</td><td>${impH}</td><td><button class="btn btn-blue btn-xs" onclick="openProfile(${p.id},'report')">Profile</button></td></tr>`;
+    }).join('');
+    wrap.innerHTML+=`<div class="section-title">📋 Today's Leaderboard</div><div class="table-wrap"><table><thead><tr><th>#</th><th>Player</th><th>Time</th><th>Best Ever</th><th>vs Last</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  } else {
+    wrap.innerHTML+='<div class="empty-state">No times recorded yet.<br><span style="font-size:12px;">Start timers to see the leaderboard.</span></div>';
+  }
+  const allRecs=state.players.flatMap(p=>(history[p.id]||[]).filter(r=>r.timeMs>0));
+  if(allRecs.length){
+    const allAvg=allRecs.reduce((a,r)=>a+r.timeMs,0)/allRecs.length;
+    const allBest=Math.min(...allRecs.map(r=>r.timeMs));
+    const bestP=state.players.find(p=>(history[p.id]||[]).some(r=>r.timeMs===allBest));
+    const totalSess=Math.max(0,...state.players.map(p=>(history[p.id]||[]).length));
+    wrap.innerHTML+=`<div class="section-title" style="margin-top:22px;">📊 All-Time Stats</div><div class="table-wrap"><table><thead><tr><th>Stat</th><th>Value</th><th>Notes</th></tr></thead><tbody>
+      <tr><td>Team Average</td><td class="td-mono">${msToClock(allAvg)}</td><td class="clr-muted">all sessions</td></tr>
+      <tr><td>All-Time Record</td><td class="td-mono clr-warn">${msToClock(allBest)}</td><td class="td-name">${bestP?bestP.name:'—'}</td></tr>
+      <tr><td>Sessions Recorded</td><td class="td-mono">${totalSess}</td><td class="clr-muted">sessions</td></tr>
+    </tbody></table></div>`;
+  }
+  wrap.innerHTML+=`<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ Export CSV</button><button class="btn btn-red btn-xs" onclick="clearAllHistory()">Clear All History</button></div>`;
+}
 
-  const t=document.createElement('table');
-  const thead=document.createElement('thead'); const trh=document.createElement('tr');
-  ['#','Player','Time','Tag','History'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);});
-  thead.appendChild(trh); t.appendChild(thead);
-  const tbody=document.createElement('tbody');
-  const fastest=fastestId();
-  state.players.forEach((p,i)=>{
-    const tr=document.createElement('tr');
-    const td1=document.createElement('td'); td1.textContent=String(i+1);
-    const td2=document.createElement('td'); td2.textContent=p.name;
-    const tms=p.running?(Date.now()-p.startAt):p.timeMs;
-    const td3=document.createElement('td'); td3.textContent=msToClock(tms);
-    const td4=document.createElement('td'); td4.textContent=(fastest&&p.id===fastest&&tms)?'FASTEST 🏅':'';
-    const td5=document.createElement('td'); const h=document.createElement('button'); h.className='btn btn-gray'; h.textContent='History'; h.onclick=()=>viewHistory(p.id); td5.appendChild(h);
-    [td1,td2,td3,td4,td5].forEach(td=>tr.appendChild(td)); tbody.appendChild(tr);
+// ── PLAYER PROFILE ────────────────────────────────────
+function openProfile(pid,from){state.profileFrom=from||'timers';save();renderProfile(pid);switchView('profile');}
+function renderProfile(pid){
+  const p=state.players.find(x=>x.id===pid);if(!p)return;
+  const recs=(history[pid]||[]).filter(r=>r.timeMs>0);
+  const allMs=recs.map(r=>r.timeMs);
+  const pb=allMs.length?Math.min(...allMs):null;
+  const latest=allMs.length?allMs[allMs.length-1]:null;
+  const prev=allMs.length>=2?allMs[allMs.length-2]:null;
+  const avg=allMs.length?allMs.reduce((a,b)=>a+b,0)/allMs.length:null;
+  const trend=prev&&latest?(((prev-latest)/prev)*100):null;
+  let tBadge='<span class="trend-badge trend-neu">No history yet</span>';
+  if(trend!==null){
+    if(trend>0.5)tBadge=`<span class="trend-badge trend-up">↑ ${trend.toFixed(1)}% faster</span>`;
+    else if(trend<-0.5)tBadge=`<span class="trend-badge trend-down">↓ ${Math.abs(trend).toFixed(1)}% slower</span>`;
+    else tBadge=`<span class="trend-badge trend-neu">≈ Same</span>`;
+  }
+  const pbRec=pb?recs.find(r=>r.timeMs===pb):null;
+
+  // session log with individual delete — use date string as unique key
+  const histRows=recs.length?[...recs].reverse().map((r,i,arr)=>{
+    const prevR=arr[i+1];
+    const delta=prevR&&r.timeMs&&prevR.timeMs?(((prevR.timeMs-r.timeMs)/prevR.timeMs)*100):null;
+    const dHtml=delta===null?'<span class="clr-muted">—</span>':`<span class="${delta>0?'clr-acc':'clr-red'}">${delta>0?'↑':'↓'}${Math.abs(delta).toFixed(1)}%</span>`;
+    const isB=r.timeMs===pb;
+    const safeDate=encodeURIComponent(r.date);
+    return`<tr>
+      <td class="clr-muted td-rank">${recs.length-i}</td>
+      <td>${new Date(r.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      <td class="td-mono${isB?' clr-warn':''}">${msToClock(r.timeMs)}${isB?' 🏅':''}</td>
+      <td>${dHtml}</td>
+      <td><button class="sess-reset-btn" onclick="deleteSingleSession(${pid},'${safeDate}')" title="Delete this session">✕</button></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);">No history yet</td></tr>';
+
+  document.getElementById('profile-content').innerHTML=`
+    <div class="profile-header">
+      <div class="profile-back-row">
+        <button class="btn btn-ghost btn-xs" onclick="switchView(state.profileFrom||'timers')">← Back</button>
+        ${tBadge}
+      </div>
+      <div class="profile-name">${p.name}</div>
+      <div class="profile-sub">${recs.length} session${recs.length!==1?'s':''} recorded</div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-val clr-warn">${pb?msToClock(pb):'—'}</div><div class="kpi-lbl">Best Ever</div></div>
+        <div class="kpi-card"><div class="kpi-val">${avg?msToClock(avg):'—'}</div><div class="kpi-lbl">Average</div></div>
+        <div class="kpi-card"><div class="kpi-val clr-acc">${latest?msToClock(latest):'—'}</div><div class="kpi-lbl">Last Run</div></div>
+      </div>
+    </div>
+    <div class="profile-body">
+      ${pb&&pbRec?`<div class="best-line">🏅 <strong style="color:var(--warn-bright)">Personal Best: ${msToClock(pb)}</strong> <span style="color:var(--muted);font-size:11px;margin-left:4px;">set ${new Date(pbRec.date).toLocaleDateString()}</span></div>`:''}
+      ${recs.length>=2?`
+        <div class="chart-card"><div class="chart-title">Progress Over Sessions</div><div class="canvas-wrap"><canvas id="chart-progress" height="120"></canvas></div></div>
+        <div class="chart-card"><div class="chart-title">Session-to-Session Change</div><div class="canvas-wrap"><canvas id="chart-delta" height="90"></canvas></div></div>`
+      :`<div class="empty-state" style="padding:24px 0 16px;">Complete at least 2 sessions to see trend charts.</div>`}
+      <div class="section-title" style="font-size:16px;margin-top:4px;">Session Log</div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Date</th><th>Time</th><th>Change</th><th></th></tr></thead><tbody>${histRows}</tbody></table></div>
+
+      <div class="reset-section">
+        <div class="reset-title">⚙ Reset Options</div>
+        <div class="reset-row">
+          <button class="btn btn-orange btn-sm" onclick="resetPlayerTimer(${pid});switchView(state.profileFrom||'timers')">Reset Today's Timer</button>
+          <button class="btn btn-red btn-sm" onclick="confirmClearPlayer(${pid})">Clear All History</button>
+        </div>
+      </div>
+    </div>`;
+
+  if(recs.length>=2){requestAnimationFrame(()=>{drawProgress('chart-progress',recs,pb);drawDelta('chart-delta',recs);});}
+}
+
+function deleteSingleSession(pid,safeDate){
+  if(!confirm('Delete this session from history?'))return;
+  const dateStr=decodeURIComponent(safeDate);
+  if(!history[pid])return;
+  // find and remove the first record matching this date
+  const idx=history[pid].findIndex(r=>r.date===dateStr);
+  if(idx===-1){toast('Could not find session','warn');return;}
+  history[pid].splice(idx,1);
+  saveHist();renderProfile(pid);toast('Session deleted','info');
+}
+function confirmClearPlayer(pid){
+  const p=state.players.find(x=>x.id===pid);
+  if(!confirm(`Clear ALL history for ${p?p.name:'this player'}? Cannot be undone.`))return;
+  resetAllPlayerHistory(pid);
+}
+
+// ── CHARTS ────────────────────────────────────────────
+function setupCanvas(id,H){
+  const c=document.getElementById(id);if(!c)return null;
+  const dpr=window.devicePixelRatio||1;const W=c.parentElement.clientWidth;
+  c.width=W*dpr;c.height=H*dpr;c.style.width=W+'px';c.style.height=H+'px';
+  const ctx=c.getContext('2d');ctx.scale(dpr,dpr);return{ctx,W,H};
+}
+function drawProgress(id,recs,pb){
+  const r=setupCanvas(id,120);if(!r)return;
+  const{ctx,W,H}=r;
+  const times=recs.map(x=>x.timeMs/1000);
+  const minT=Math.min(...times)*0.96,maxT=Math.max(...times)*1.04;
+  const pad={l:10,r:10,t:14,b:26};
+  const w=W-pad.l-pad.r,h=H-pad.t-pad.b;
+  const X=i=>pad.l+(i/(times.length-1))*w;
+  const Y=v=>pad.t+(1-(v-minT)/(maxT-minT))*h;
+  if(pb){
+    const py=Y(pb/1000);
+    ctx.beginPath();ctx.moveTo(pad.l,py);ctx.lineTo(pad.l+w,py);
+    ctx.strokeStyle='rgba(245,158,11,0.3)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='rgba(245,158,11,0.7)';ctx.font=`700 9px 'DM Mono',monospace`;ctx.textAlign='left';
+    ctx.fillText('PR',pad.l+2,py-3);
+  }
+  const g=ctx.createLinearGradient(0,pad.t,0,pad.t+h);
+  g.addColorStop(0,'rgba(26,158,92,0.18)');g.addColorStop(1,'rgba(26,158,92,0)');
+  ctx.beginPath();ctx.moveTo(X(0),Y(times[0]));
+  for(let i=1;i<times.length;i++){const cx=(X(i-1)+X(i))/2;ctx.bezierCurveTo(cx,Y(times[i-1]),cx,Y(times[i]),X(i),Y(times[i]));}
+  ctx.lineTo(X(times.length-1),H-pad.b);ctx.lineTo(X(0),H-pad.b);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(X(0),Y(times[0]));
+  for(let i=1;i<times.length;i++){const cx=(X(i-1)+X(i))/2;ctx.bezierCurveTo(cx,Y(times[i-1]),cx,Y(times[i]),X(i),Y(times[i]));}
+  ctx.strokeStyle='#1a9e5c';ctx.lineWidth=2.5;ctx.stroke();
+  times.forEach((t,i)=>{
+    const cx=X(i),cy=Y(t),isLast=i===times.length-1,isBest=recs[i].timeMs===pb;
+    ctx.beginPath();ctx.arc(cx,cy,isLast?5:3.5,0,Math.PI*2);
+    ctx.fillStyle=isBest?'#f59e0b':isLast?'#1a9e5c':'#ffffff';
+    ctx.strokeStyle=isBest?'#f59e0b':'#1a9e5c';ctx.lineWidth=2;ctx.fill();ctx.stroke();
+    const s=Math.floor(t);
+    ctx.fillStyle='#8e8e93';ctx.font=`500 9px 'DM Mono',monospace`;ctx.textAlign='center';
+    ctx.fillText(Math.floor(t/60)+':'+(s%60<10?'0':'')+(s%60),cx,H-5);
   });
-  t.appendChild(tbody); c.appendChild(t); return c;
+}
+function drawDelta(id,recs){
+  const r=setupCanvas(id,90);if(!r)return;
+  const{ctx,W,H}=r;
+  const deltas=[];
+  for(let i=1;i<recs.length;i++)deltas.push(((recs[i-1].timeMs-recs[i].timeMs)/recs[i-1].timeMs)*100);
+  if(!deltas.length)return;
+  const maxAbs=Math.max(...deltas.map(d=>Math.abs(d)),0.5)*1.25;
+  const pad={l:10,r:10,t:12,b:22};
+  const w=W-pad.l-pad.r,h=H-pad.t-pad.b;
+  const midY=pad.t+h/2;
+  const barW=Math.min(28,(w/deltas.length)-8);
+  ctx.beginPath();ctx.moveTo(pad.l,midY);ctx.lineTo(pad.l+w,midY);
+  ctx.strokeStyle='rgba(0,0,0,0.08)';ctx.lineWidth=1;ctx.stroke();
+  deltas.forEach((d,i)=>{
+    const cx=pad.l+(i+0.5)*(w/deltas.length);
+    const bh=(Math.abs(d)/maxAbs)*(h/2);const up=d>=0;
+    ctx.fillStyle=up?'rgba(26,158,92,0.75)':'rgba(217,48,37,0.75)';
+    if(up)ctx.fillRect(cx-barW/2,midY-bh,barW,bh);
+    else ctx.fillRect(cx-barW/2,midY,barW,bh);
+    ctx.fillStyle=up?'#1a9e5c':'#d93025';
+    ctx.font=`700 9px 'DM Mono',monospace`;ctx.textAlign='center';
+    ctx.fillText((up?'+':'')+d.toFixed(1)+'%',cx,up?midY-bh-3:midY+bh+10);
+    ctx.fillStyle='#8e8e93';ctx.font=`500 8px 'DM Mono',monospace`;
+    ctx.fillText(`S${i+1}→${i+2}`,cx,H-4);
+  });
 }
 
-function renderHistory(pid){
-  const c=document.createElement('div');
-  const tools=document.createElement('div'); tools.className='toolbar';
-  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back to Report'; back.onclick=viewReport;
-  tools.appendChild(back); c.appendChild(tools);
-  const recs=history[pid]||[]; const player=state.players.find(p=>p.id===pid)||{name:'Player'};
-  const h3=document.createElement('h3'); h3.textContent=player.name+' — History'; c.appendChild(h3);
-  const t=document.createElement('table'); const thead=document.createElement('thead'); const trh=document.createElement('tr');
-  ['Date','Time'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);}); thead.appendChild(trh); t.appendChild(thead);
-  const tbody=document.createElement('tbody');
-  recs.forEach(r=>{const tr=document.createElement('tr'); const td1=document.createElement('td'); td1.textContent=(new Date(r.date)).toLocaleString();
-                   const td2=document.createElement('td'); td2.textContent=msToClock(r.timeMs);
-                   tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);});
-  t.appendChild(tbody); c.appendChild(t); if(!recs.length){const p=document.createElement('p'); p.textContent='No history yet.'; p.className='muted'; c.appendChild(p);} return c;
+// ── ROSTER ────────────────────────────────────────────
+function addPlayer(){
+  const id=state.players.length?Math.max(...state.players.map(p=>p.id))+1:1;
+  state.players.push({id,name:'New Player',timeMs:0,running:false,startAt:0});
+  save();renderRoster();
+}
+function deletePlayer(id){if(!confirm('Remove this player?'))return;state.players=state.players.filter(p=>p.id!==id);save();renderRoster();}
+function editPlayer(id){state.editingId=id;save();renderRoster();setTimeout(()=>{const el=document.getElementById('ei-'+id);if(el){el.focus();el.select();}},30);}
+function savePlayer(id){
+  const el=document.getElementById('ei-'+id);const p=state.players.find(x=>x.id===id);
+  if(p&&el)p.name=el.value.trim()||p.name;
+  state.editingId=null;save();renderRoster();
+}
+function cancelEdit(){state.editingId=null;save();renderRoster();}
+function renderRoster(){
+  const wrap=document.getElementById('roster-content');wrap.innerHTML='';
+  state.players.forEach((p,i)=>{
+    const card=document.createElement('div');card.className='roster-card';
+    if(state.editingId===p.id){
+      card.innerHTML=`<div class="roster-num">${i+1}</div><input id="ei-${p.id}" class="name-input-edit" value="${p.name}" onkeydown="if(event.key==='Enter')savePlayer(${p.id});if(event.key==='Escape')cancelEdit()"><button class="btn btn-green btn-xs" onclick="savePlayer(${p.id})">Save</button><button class="btn btn-ghost btn-xs" onclick="cancelEdit()">Cancel</button>`;
+    } else {
+      const recs=(history[p.id]||[]).filter(r=>r.timeMs>0);
+      const pb=recs.length?msToClock(Math.min(...recs.map(r=>r.timeMs))):'—';
+      card.innerHTML=`
+        <div class="roster-num">${i+1}</div>
+        <div class="roster-info">
+          <div class="roster-name">${p.name}</div>
+          <div class="roster-pr">PR: ${pb} · ${recs.length} session${recs.length!==1?'s':''}</div>
+        </div>
+        <button class="btn btn-blue btn-xs" onclick="openProfile(${p.id},'roster')">📈</button>
+        <button class="btn btn-ghost btn-xs" onclick="editPlayer(${p.id})">Edit</button>
+        <button class="btn btn-red btn-xs" onclick="deletePlayer(${p.id})">✕</button>`;
+    }
+    wrap.appendChild(card);
+  });
 }
 
-function renderAllHistories(){
-  const c=document.createElement('div');
-  const tools=document.createElement('div'); tools.className='toolbar';
-  const back=document.createElement('button'); back.className='btn btn-gray'; back.textContent='Back'; back.onclick=()=>nav('timers');
-  tools.appendChild(back); c.appendChild(tools);
-  const t=document.createElement('table'); const thead=document.createElement('thead'); const trh=document.createElement('tr');
-  ['Player','Latest'].forEach(h=>{const th=document.createElement('th'); th.textContent=h; trh.appendChild(th);}); thead.appendChild(trh); t.appendChild(thead);
-  const tbody=document.createElement('tbody');
-  state.players.forEach(p=>{const recs=history[p.id]||[]; const latest=recs.length?recs[recs.length-1]:null;
-    const tr=document.createElement('tr'); const td1=document.createElement('td'); td1.textContent=p.name; td1.style.cursor='pointer'; td1.onclick=()=>viewHistory(p.id);
-    const td2=document.createElement('td'); td2.textContent=latest?(latest.timeMs?msToClock(latest.timeMs):'—'):'—'; tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);});
-  t.appendChild(tbody); c.appendChild(t); return c;
+// ── NAV ───────────────────────────────────────────────
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  const tab=document.getElementById('tab-'+v);if(tab)tab.classList.add('active');
+  state.view=v;save();
+  if(v==='report')renderReport();
+  if(v==='roster')renderRoster();
+  if(v==='timers')renderTimers();
 }
 
-function render(){
-  const main=document.getElementById('main'); main.innerHTML='';
-  if(state.view==='timers') main.appendChild(renderTimers());
-  else if(state.view==='roster') main.appendChild(renderRoster());
-  else if(state.view==='report') main.appendChild(renderReport());
-  else if(typeof state.view==='object'&&state.view.name==='history') main.appendChild(renderHistory(state.view.id));
-  else if(state.view==='allhist') main.appendChild(renderAllHistories());
+// ── EXPORT / CLEAR ────────────────────────────────────
+function exportCSV(){
+  let csv='Player,Date,Time (m:ss),Seconds\n';
+  state.players.forEach(p=>{(history[p.id]||[]).forEach(r=>{csv+=`"${p.name}","${new Date(r.date).toLocaleDateString()}","${msToClock(r.timeMs)}","${(r.timeMs/1000).toFixed(2)}"\n`;});});
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='coach-timer.csv';a.click();
 }
-setInterval(()=>{ if(state.view==='timers') render(); }, 300);
-render();
-if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
+function clearAllHistory(){
+  if(!confirm('Clear ALL history permanently?'))return;
+  history={};
+  localStorage.setItem(HK, JSON.stringify({}));
+  renderReport();toast('All history cleared','info');
+}
+
+// ── TOAST ─────────────────────────────────────────────
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>el.classList.remove('show'),2600);
+}
+
+// ── LOOP ──────────────────────────────────────────────
+setInterval(()=>{
+  if(state.view==='timers')renderTimers();
+  else if(state.view==='report')renderReport();
+},300);
+
+// ── INIT ──────────────────────────────────────────────
+renderTimers();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js');
 </script>
-</body></html>
+</body>
+</html>
