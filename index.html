@@ -99,17 +99,15 @@ header{position:sticky;top:0;z-index:100;background:rgba(242,242,247,0.92);backd
 /* Each item = clip container + swipe layers */
 .swipe-item{position:relative;border-radius:var(--radius);overflow:hidden;flex-shrink:0;}
 
-/* Swipe reveal backgrounds — left (start=green) and right (stop/reset=red/orange) */
+/* Swipe reveal backgrounds */
 .swipe-bg{
   position:absolute;inset:0;display:flex;align-items:center;
   border-radius:var(--radius);pointer-events:none;
 }
-.swipe-bg-left{justify-content:flex-start;background:var(--swipe-green);padding-left:20px;}
-.swipe-bg-right{justify-content:flex-end;background:var(--swipe-red);padding-right:20px;}
-.swipe-bg-right.is-running{background:var(--swipe-red);}
-.swipe-bg-right.not-running{background:var(--swipe-orange);}
-.swipe-icon{font-size:22px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:2px;}
-.swipe-icon span{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;opacity:0.85;}
+.swipe-bg-left{justify-content:flex-start;background:#1a9e5c;padding-left:22px;}
+.swipe-bg-right{justify-content:flex-end;background:#d93025;padding-right:22px;}
+.swipe-icon{font-size:24px;color:#fff;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.swipe-icon span{font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;}
 
 /* The draggable card */
 .player-card{
@@ -117,11 +115,11 @@ header{position:sticky;top:0;z-index:100;background:rgba(242,242,247,0.92);backd
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);padding:12px 14px;
   display:flex;align-items:center;gap:10px;
-  transition:transform 0.18s ease, box-shadow 0.18s;
+  transition:transform 0.3s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.18s;
   box-shadow:var(--shadow-sm);
-  touch-action:pan-y;
   will-change:transform;
   user-select:none;
+  -webkit-user-select:none;
 }
 .player-card.running{background:var(--running-bg);border-color:var(--running-border);}
 .player-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border2);border-radius:3px 0 0 3px;transition:all 0.2s;}
@@ -451,12 +449,46 @@ function start(id){
   const p=state.players.find(x=>x.id===id);
   if(p&&!p.running){
     if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
-    p.running=true;p.startAt=Date.now()-(p.timeMs||0);save();
+    p.running=true; p.startAt=Date.now()-(p.timeMs||0); save();
+    updateCardState(id);
   }
 }
 function stop(id){
   const p=state.players.find(x=>x.id===id);
-  if(p&&p.running){p.timeMs=Date.now()-p.startAt;p.running=false;save();renderTimers();}
+  if(p&&p.running){
+    p.timeMs=Date.now()-p.startAt; p.running=false; save();
+    updateCardState(id);
+  }
+}
+
+// Update a single card's visual state without re-rendering the whole list
+function updateCardState(id){
+  const p=state.players.find(x=>x.id===id);
+  if(!p) return;
+  // find the card in the DOM by data-pid attribute
+  const card=document.querySelector(`.player-card[data-pid="${id}"]`);
+  if(!card){ renderTimers(); return; } // fallback
+  // update running class
+  card.classList.toggle('running', p.running);
+  // update time display
+  const timeEl=card.querySelector('.player-time');
+  if(timeEl) timeEl.textContent=msToClock(liveMs(p));
+  // swap start/stop button
+  const actionsArea=card.querySelector('.card-action-btn');
+  if(actionsArea){
+    actionsArea.outerHTML=p.running
+      ?`<button class="stop-btn card-action-btn" onclick="stop(${id})">■</button>`
+      :`<button class="start-btn card-action-btn" onclick="start(${id})">▶</button>`;
+  }
+  // update live dot
+  const nameRow=card.querySelector('.player-name-row');
+  const oldDot=nameRow&&nameRow.querySelector('.live-dot');
+  if(p.running&&!oldDot&&nameRow){
+    const dot=document.createElement('span');dot.className='live-dot';nameRow.appendChild(dot);
+  } else if(!p.running&&oldDot){
+    oldDot.remove();
+  }
+  refreshSessionUI();
 }
 function startAll(){
   if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
@@ -549,88 +581,113 @@ function resetAllPlayerHistory(pid){
 }
 
 // ── SWIPE GESTURES ────────────────────────────────────
-const SWIPE_THRESHOLD = 72;   // px needed to trigger action
-const SWIPE_MAX = 110;         // max drag distance
+const SWIPE_THRESHOLD = 72;
+const SWIPE_MAX = 110;
+let _swipeActive = false;
 
-function attachSwipe(cardEl, pid){
-  let startX=0, startY=0, currentX=0, dragging=false, axis=null;
-  const bgLeft=cardEl.parentElement.querySelector('.swipe-bg-left');
-  const bgRight=cardEl.parentElement.querySelector('.swipe-bg-right');
+function attachSwipe(wrapperEl, cardEl, pid){
+  let startX=0, startY=0, curX=0, active=false, axis=null;
 
-  function onStart(e){
-    const t=e.touches?e.touches[0]:e;
-    startX=t.clientX; startY=t.clientY;
-    currentX=0; dragging=true; axis=null;
-    cardEl.style.transition='none';
-  }
-  function onMove(e){
-    if(!dragging)return;
-    const t=e.touches?e.touches[0]:e;
-    const dx=t.clientX-startX;
-    const dy=t.clientY-startY;
-    // determine scroll vs swipe axis on first significant move
+  wrapperEl.addEventListener('touchstart', function(e){
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    curX = 0; active = true; axis = null;
+    // don't set transition yet — wait until we know axis
+  }, {passive:true});
+
+  wrapperEl.addEventListener('touchmove', function(e){
+    if(!active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
     if(!axis){
-      if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>6)axis='x';
-      else if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>6)axis='y';
+      if(Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy))       axis = 'x';
+      else if(Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx))  axis = 'y';
       else return;
     }
-    if(axis==='y')return; // let page scroll
-    e.preventDefault();
-    // clamp
-    currentX=Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx));
-    cardEl.style.transform=`translateX(${currentX}px)`;
 
-    // update bg icons dynamically
-    const p=state.players.find(x=>x.id===pid);
-    if(currentX>0){
-      // swiping right → start (green)
-      bgLeft.style.opacity=Math.min(1,currentX/SWIPE_THRESHOLD);
-      bgRight.style.opacity=0;
-      // show correct icon
-      bgLeft.innerHTML=`<div class="swipe-icon">${p&&p.running?'■':'▶'}<span>${p&&p.running?'Stop':'Start'}</span></div>`;
-    } else {
-      // swiping left → stop if running, reset if not
-      bgLeft.style.opacity=0;
-      bgRight.style.opacity=Math.min(1,-currentX/SWIPE_THRESHOLD);
-      const isRunning=p&&p.running;
-      bgRight.className='swipe-bg swipe-bg-right '+(isRunning?'is-running':'not-running');
-      bgRight.innerHTML=`<div class="swipe-icon">${isRunning?'■':'↺'}<span>${isRunning?'Stop':'Reset'}</span></div>`;
+    if(axis === 'y'){
+      // let the page scroll — do nothing
+      return;
     }
-  }
-  function onEnd(){
-    if(!dragging||axis!=='x'){dragging=false;axis=null;return;}
-    dragging=false;axis=null;
-    cardEl.style.transition='transform 0.2s ease';
-    const p=state.players.find(x=>x.id===pid);
 
-    if(currentX >= SWIPE_THRESHOLD){
-      // swipe right → start (or stop if running)
-      triggerFlash(cardEl, p&&p.running?'red':'green');
-      if(p&&p.running) stop(pid); else start(pid);
-    } else if(currentX <= -SWIPE_THRESHOLD){
-      // swipe left
-      if(p&&p.running){
-        triggerFlash(cardEl,'red');stop(pid);
+    // horizontal swipe — prevent scroll
+    e.preventDefault();
+    e.stopPropagation();
+    _swipeActive = true;
+    cardEl.style.transition = 'none';
+
+    const sign = dx > 0 ? 1 : -1;
+    const abs  = Math.abs(dx);
+    curX = sign * Math.min(SWIPE_MAX,
+      abs < SWIPE_THRESHOLD ? abs : SWIPE_THRESHOLD + (abs-SWIPE_THRESHOLD)*0.3);
+
+    cardEl.style.transition = 'none';
+    cardEl.style.transform  = `translateX(${curX}px)`;
+
+    const bgL = wrapperEl.querySelector('.swipe-bg-left');
+    const bgR = wrapperEl.querySelector('.swipe-bg-right');
+    const p   = state.players.find(x=>x.id===pid);
+    const pct = Math.min(1, Math.abs(curX)/SWIPE_THRESHOLD);
+    const hit = Math.abs(curX) >= SWIPE_THRESHOLD;
+
+    if(curX > 0){
+      if(bgR) bgR.style.opacity='0';
+      if(bgL){
+        bgL.style.opacity = '1';
+        bgL.style.background = hit ? '#0c7a44' : '#1a9e5c';
+        const lbl = hit ? 'GO!' : (p&&p.running?'Stop':'Start');
+        const ico = p&&p.running ? '■' : '▶';
+        bgL.innerHTML = `<div class="swipe-icon" style="opacity:${(0.3+pct*0.7).toFixed(2)};transform:scale(${(0.6+pct*0.5).toFixed(2)})">${ico}<span>${lbl}</span></div>`;
+      }
+    } else if(curX < 0){
+      if(bgL) bgL.style.opacity='0';
+      if(bgR){
+        bgR.style.opacity = '1';
+        const isRun = p&&p.running;
+        bgR.style.background = hit
+          ? (isRun?'#a81919':'#b85c00')
+          : (isRun?'#d93025':'#e07b00');
+        const lbl = hit ? 'GO!' : (isRun?'Stop':'Reset');
+        const ico = isRun ? '■' : '↺';
+        bgR.innerHTML = `<div class="swipe-icon" style="opacity:${(0.3+pct*0.7).toFixed(2)};transform:scale(${(0.6+pct*0.5).toFixed(2)})">${ico}<span>${lbl}</span></div>`;
+      }
+    } else {
+      if(bgL) bgL.style.opacity='0';
+      if(bgR) bgR.style.opacity='0';
+    }
+  }, {passive:false});
+
+  function finish(){
+    if(!active){ _swipeActive=false; return; }
+    active = false; _swipeActive = false;
+
+    const bgL = wrapperEl.querySelector('.swipe-bg-left');
+    const bgR = wrapperEl.querySelector('.swipe-bg-right');
+    const p   = state.players.find(x=>x.id===pid);
+    const hit = Math.abs(curX) >= SWIPE_THRESHOLD;
+    const dir = curX > 0 ? 'right' : 'left';
+
+    cardEl.style.transition = 'transform 0.32s cubic-bezier(0.34,1.4,0.64,1)';
+    cardEl.style.transform  = 'translateX(0)';
+    if(bgL){ bgL.style.transition='opacity 0.2s'; bgL.style.opacity='0'; }
+    if(bgR){ bgR.style.transition='opacity 0.2s'; bgR.style.opacity='0'; }
+
+    if(hit && axis==='x'){
+      if(dir==='right'){
+        triggerFlash(cardEl, p&&p.running?'red':'green');
+        if(p&&p.running) stop(pid); else start(pid);
       } else {
-        // reset timer for this player (non-destructive — just clears today's time)
-        triggerFlash(cardEl,'orange');resetPlayerTimer(pid);
+        if(p&&p.running){ triggerFlash(cardEl,'red');    stop(pid); }
+        else             { triggerFlash(cardEl,'orange'); resetPlayerTimer(pid); }
       }
     }
-
-    // snap back
-    cardEl.style.transform='translateX(0)';
-    bgLeft.style.opacity=0;
-    bgRight.style.opacity=0;
-    currentX=0;
+    curX=0; axis=null;
   }
 
-  cardEl.addEventListener('touchstart',onStart,{passive:true});
-  cardEl.addEventListener('touchmove',onMove,{passive:false});
-  cardEl.addEventListener('touchend',onEnd);
-  // mouse fallback for desktop testing
-  cardEl.addEventListener('mousedown',onStart);
-  window.addEventListener('mousemove',onMove);
-  window.addEventListener('mouseup',onEnd);
+  wrapperEl.addEventListener('touchend',    finish, {passive:true});
+  wrapperEl.addEventListener('touchcancel', finish, {passive:true});
 }
 
 function triggerFlash(el,type){
@@ -692,6 +749,7 @@ function renderTimers(){
 
     const card=document.createElement('div');
     card.className='player-card'+(p.running?' running':'')+(isPR?' is-pr':'');
+    card.dataset.pid=p.id;
     card.innerHTML=`
       <div class="player-num">${idx}</div>
       <div class="player-info">
@@ -705,15 +763,15 @@ function renderTimers(){
       <div class="player-time">${msToClock(ms)}</div>
       <button class="hist-btn" onclick="openProfile(${p.id},'timers')" title="Profile">📈</button>
       ${p.running
-        ?`<button class="stop-btn" onclick="stop(${p.id})">■</button>`
-        :`<button class="start-btn" onclick="start(${p.id})">▶</button>`}`;
+        ?`<button class="stop-btn card-action-btn" onclick="stop(${p.id})">■</button>`
+        :`<button class="start-btn card-action-btn" onclick="start(${p.id})">▶</button>`}`;
 
     wrapper.appendChild(bgL);
     wrapper.appendChild(bgR);
     wrapper.appendChild(card);
     list.appendChild(wrapper);
 
-    attachSwipe(card, p.id);
+    attachSwipe(wrapper, card, p.id);
   });
 }
 
@@ -976,8 +1034,25 @@ function toast(msg,type=''){
 
 // ── LOOP ──────────────────────────────────────────────
 setInterval(()=>{
-  if(state.view==='timers')renderTimers();
-  else if(state.view==='report')renderReport();
+  if(_swipeActive) return;
+  if(state.view==='timers'){
+    // update only the time displays in-place — no DOM rebuild
+    state.players.forEach(p=>{
+      if(!p.running) return;
+      const card=document.querySelector(`.player-card[data-pid="${p.id}"]`);
+      if(!card) return;
+      const timeEl=card.querySelector('.player-time');
+      if(timeEl) timeEl.textContent=msToClock(liveMs(p));
+    });
+    // update session duration in banner
+    const sbDur=document.getElementById('sb-dur');
+    if(sbDur&&state.sessionOpen) sbDur.textContent=elapsed();
+    // full re-render only if search changed or no cards exist
+    const list=document.getElementById('player-list');
+    if(!list||!list.querySelector('.player-card')) renderTimers();
+  } else if(state.view==='report'){
+    renderReport();
+  }
 },300);
 
 // ── INIT ──────────────────────────────────────────────
