@@ -717,13 +717,24 @@ function renderTimers(){
   refreshSessionUI();
 
   let players=[...state.players];
-  if(q)players=players.filter(p=>p.name.toLowerCase().includes(q));
-  players=[...players.filter(p=>p.running),...players.filter(p=>!p.running)];
+  if(q) players=players.filter(p=>p.name.toLowerCase().includes(q));
+
+  // Three groups: running → done (has time) → waiting (no time yet)
+  const grpRunning = players.filter(p=>p.running);
+  const grpDone    = players.filter(p=>!p.running && p.timeMs>0).sort((a,b)=>a.timeMs-b.timeMs);
+  const grpWaiting = players.filter(p=>!p.running && !p.timeMs);
 
   list.innerHTML='';
   if(!players.length){list.innerHTML='<div class="empty-state">No players found</div>';return;}
 
-  players.forEach(p=>{
+  function addGroupLabel(text, count, color){
+    const lbl=document.createElement('div');
+    lbl.style.cssText=`display:flex;align-items:center;gap:7px;padding:4px 4px 2px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${color};`;
+    lbl.innerHTML=`<span>${text}</span><span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;">${count}</span>`;
+    list.appendChild(lbl);
+  }
+
+  function addCard(p){
     const ms=liveMs(p);
     const pb=getPB(p.id);
     const isPR=pb&&p.timeMs>0&&!p.running&&p.timeMs<=pb;
@@ -737,14 +748,12 @@ function renderTimers(){
     let dispName=p.name;
     if(q){const i=p.name.toLowerCase().indexOf(q);if(i>=0)dispName=p.name.slice(0,i)+`<span class="hl">${p.name.slice(i,i+q.length)}</span>`+p.name.slice(i+q.length);}
 
-    // Wrapper (clip container)
     const wrapper=document.createElement('div');
     wrapper.className='swipe-item';
 
-    // bg layers
     const bgL=document.createElement('div');bgL.className='swipe-bg swipe-bg-left';bgL.style.opacity=0;
     bgL.innerHTML=`<div class="swipe-icon">▶<span>Start</span></div>`;
-    const bgR=document.createElement('div');bgR.className='swipe-bg swipe-bg-right '+(p.running?'is-running':'not-running');bgR.style.opacity=0;
+    const bgR=document.createElement('div');bgR.className='swipe-bg swipe-bg-right';bgR.style.opacity=0;
     bgR.innerHTML=`<div class="swipe-icon">${p.running?'■':'↺'}<span>${p.running?'Stop':'Reset'}</span></div>`;
 
     const card=document.createElement('div');
@@ -770,19 +779,35 @@ function renderTimers(){
     wrapper.appendChild(bgR);
     wrapper.appendChild(card);
     list.appendChild(wrapper);
+    attachSwipe(wrapper,card,p.id);
+  }
 
-    attachSwipe(wrapper, card, p.id);
-  });
+  if(grpRunning.length){
+    addGroupLabel('⏱ Running', grpRunning.length, '#1a9e5c');
+    grpRunning.forEach(addCard);
+  }
+  if(grpDone.length){
+    addGroupLabel('✓ Done', grpDone.length, '#1a73e8');
+    grpDone.forEach(addCard);
+  }
+  if(grpWaiting.length){
+    if(grpRunning.length||grpDone.length) addGroupLabel('· Waiting', grpWaiting.length, '#8e8e93');
+    grpWaiting.forEach(addCard);
+  }
 }
 
 // ── RENDER: REPORT ────────────────────────────────────
+const TEN_MIN = 10 * 60 * 1000;
+
 function renderReport(){
   const wrap=document.getElementById('report-content');wrap.innerHTML='';
   const withTime=state.players.filter(p=>p.timeMs>0||p.running);
   const sorted=[...withTime].sort((a,b)=>liveMs(a)-liveMs(b));
+
   if(sorted.length){
     const f=sorted[0];
     wrap.innerHTML+=`<div class="fastest-banner"><div class="fb-trophy">🏆</div><div><div class="fb-label">Today's Leader</div><div class="fb-name">${f.name}</div></div><div class="fb-time">${msToClock(liveMs(f))}</div></div>`;
+
     const medals=['🥇','🥈','🥉'];
     const rows=sorted.map((p,i)=>{
       const ms=liveMs(p);const pb=getPB(p.id);const imp=getImprove(p.id,p.timeMs);
@@ -791,9 +816,62 @@ function renderReport(){
       return`<tr><td class="td-rank">${medals[i]||(i+1)}</td><td class="td-name">${p.name}</td><td class="td-mono">${msToClock(ms)}</td><td class="td-mono clr-warn">${pb?msToClock(pb):'—'}</td><td>${impH}</td><td><button class="btn btn-blue btn-xs" onclick="openProfile(${p.id},'report')">Profile</button></td></tr>`;
     }).join('');
     wrap.innerHTML+=`<div class="section-title">📋 Today's Leaderboard</div><div class="table-wrap"><table><thead><tr><th>#</th><th>Player</th><th>Time</th><th>Best Ever</th><th>vs Last</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+
+    // ── UNDER / OVER 10 MIN SPLIT ──
+    const under=sorted.filter(p=>liveMs(p)<TEN_MIN);
+    const over =sorted.filter(p=>liveMs(p)>=TEN_MIN);
+    const notTimed=state.players.filter(p=>!p.timeMs&&!p.running);
+
+    wrap.innerHTML+=`<div class="section-title" style="margin-top:22px;">⚡ Under / Over 10 Minutes</div>`;
+
+    // Under 10 box
+    wrap.innerHTML+=`
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#166534;margin-bottom:8px;">
+          ✅ Under 10 min <span style="background:#166534;color:#fff;border-radius:10px;padding:1px 8px;margin-left:4px;">${under.length}</span>
+        </div>
+        ${under.length
+          ? under.map((p,i)=>`
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #bbf7d0;${i===under.length-1?'border-bottom:none':''}">
+                <span style="font-size:13px;font-weight:700;color:#166534;min-width:20px;">${i+1}</span>
+                <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+                <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:#16a34a;">${msToClock(liveMs(p))}</span>
+              </div>`).join('')
+          : `<div style="color:#86efac;font-size:13px;text-align:center;padding:8px 0;">No one under 10 min yet</div>`}
+      </div>`;
+
+    // Over 10 box
+    wrap.innerHTML+=`
+      <div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:#9a3412;margin-bottom:8px;">
+          ⏰ Over 10 min <span style="background:#9a3412;color:#fff;border-radius:10px;padding:1px 8px;margin-left:4px;">${over.length}</span>
+        </div>
+        ${over.length
+          ? over.map((p,i)=>`
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #fed7aa;${i===over.length-1?'border-bottom:none':''}">
+                <span style="font-size:13px;font-weight:700;color:#9a3412;min-width:20px;">${i+1}</span>
+                <span style="flex:1;font-size:14px;font-weight:600;">${p.name}</span>
+                <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:#ea580c;">${msToClock(liveMs(p))}</span>
+              </div>`).join('')
+          : `<div style="color:#fdba74;font-size:13px;text-align:center;padding:8px 0;">No one over 10 min</div>`}
+      </div>`;
+
+    // Not yet timed
+    if(notTimed.length){
+      wrap.innerHTML+=`
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;">
+            ⌛ Not Yet Timed <span style="background:var(--muted);color:#fff;border-radius:10px;padding:1px 8px;margin-left:4px;">${notTimed.length}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${notTimed.map(p=>`<span style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;">${p.name.split(' ')[0]}</span>`).join('')}
+          </div>
+        </div>`;
+    }
   } else {
     wrap.innerHTML+='<div class="empty-state">No times recorded yet.<br><span style="font-size:12px;">Start timers to see the leaderboard.</span></div>';
   }
+
   const allRecs=state.players.flatMap(p=>(history[p.id]||[]).filter(r=>r.timeMs>0));
   if(allRecs.length){
     const allAvg=allRecs.reduce((a,r)=>a+r.timeMs,0)/allRecs.length;
