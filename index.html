@@ -450,14 +450,14 @@ function start(id){
   if(p&&!p.running){
     if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
     p.running=true; p.startAt=Date.now()-(p.timeMs||0); save();
-    updateCardState(id);
+    renderTimers();
   }
 }
 function stop(id){
   const p=state.players.find(x=>x.id===id);
   if(p&&p.running){
     p.timeMs=Date.now()-p.startAt; p.running=false; save();
-    updateCardState(id);
+    renderTimers();
   }
 }
 
@@ -719,17 +719,19 @@ function renderTimers(){
   let players=[...state.players];
   if(q) players=players.filter(p=>p.name.toLowerCase().includes(q));
 
-  // Three groups: running → done (has time) → waiting (no time yet)
+  // Groups: running on top → done (alphabetical) → waiting (alphabetical)
   const grpRunning = players.filter(p=>p.running);
-  const grpDone    = players.filter(p=>!p.running && p.timeMs>0).sort((a,b)=>a.timeMs-b.timeMs);
-  const grpWaiting = players.filter(p=>!p.running && !p.timeMs);
+  const grpDone    = players.filter(p=>!p.running && p.timeMs>0).sort((a,b)=>a.name.localeCompare(b.name));
+  const grpWaiting = players.filter(p=>!p.running && !p.timeMs).sort((a,b)=>a.name.localeCompare(b.name));
 
   list.innerHTML='';
   if(!players.length){list.innerHTML='<div class="empty-state">No players found</div>';return;}
 
+  const anyActivity = grpRunning.length>0 || grpDone.length>0;
+
   function addGroupLabel(text, count, color){
     const lbl=document.createElement('div');
-    lbl.style.cssText=`display:flex;align-items:center;gap:7px;padding:4px 4px 2px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${color};`;
+    lbl.style.cssText=`display:flex;align-items:center;gap:7px;padding:6px 4px 2px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${color};`;
     lbl.innerHTML=`<span>${text}</span><span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;">${count}</span>`;
     list.appendChild(lbl);
   }
@@ -791,7 +793,8 @@ function renderTimers(){
     grpDone.forEach(addCard);
   }
   if(grpWaiting.length){
-    if(grpRunning.length||grpDone.length) addGroupLabel('· Waiting', grpWaiting.length, '#8e8e93');
+    // Only show "Waiting" label if there's activity happening — otherwise just show the clean list
+    if(anyActivity) addGroupLabel('· Waiting', grpWaiting.length, '#8e8e93');
     grpWaiting.forEach(addCard);
   }
 }
