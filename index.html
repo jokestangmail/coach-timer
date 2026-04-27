@@ -447,18 +447,43 @@ function closeModal(id){document.getElementById(id).classList.remove('show');}
 // ── TIMER ACTIONS ─────────────────────────────────────
 function start(id){
   const p=state.players.find(x=>x.id===id);
-  if(p&&!p.running){
-    if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
-    p.running=true; p.startAt=Date.now()-(p.timeMs||0); save();
-    renderTimers();
+  if(!p||p.running) return;
+  if(!state.sessionOpen){state.sessionOpen=true;state.sessionStart=Date.now();}
+  p.running=true; p.startAt=Date.now()-(p.timeMs||0); save();
+
+  // Patch the existing card in-place — no re-render
+  const card=document.querySelector(`.player-card[data-pid="${id}"]`);
+  if(card){
+    card.classList.add('running');
+    // swap button
+    const btn=card.querySelector('.card-action-btn');
+    if(btn){btn.className='stop-btn card-action-btn';btn.textContent='■';btn.onclick=()=>stop(id);}
+    // add live dot
+    const nameRow=card.querySelector('.player-name-row');
+    if(nameRow&&!nameRow.querySelector('.live-dot')){
+      const dot=document.createElement('span');dot.className='live-dot';nameRow.appendChild(dot);
+    }
+    // move wrapper to top of list (before first non-running item)
+    const list=document.getElementById('player-list');
+    const wrapper=card.closest('.swipe-item');
+    if(wrapper&&list){
+      const firstNonRunning=list.querySelector('.swipe-item .player-card:not(.running)')?.closest('.swipe-item');
+      if(firstNonRunning) list.insertBefore(wrapper, firstNonRunning);
+      else list.prepend(wrapper);
+    }
+    // refresh group labels without rebuilding cards
+    refreshGroupLabels();
+  } else {
+    renderTimers(); // card not in DOM yet, full render needed
   }
+  refreshSessionUI();
 }
+
 function stop(id){
   const p=state.players.find(x=>x.id===id);
-  if(p&&p.running){
-    p.timeMs=Date.now()-p.startAt; p.running=false; save();
-    renderTimers();
-  }
+  if(!p||!p.running) return;
+  p.timeMs=Date.now()-p.startAt; p.running=false; save();
+  renderTimers(); // full re-render to move card to Done group
 }
 
 // Update a single card's visual state without re-rendering the whole list
@@ -697,6 +722,38 @@ function triggerFlash(el,type){
   setTimeout(()=>el.classList.remove('flash-green','flash-red','flash-orange'),400);
 }
 
+// Refresh just the group labels without touching cards
+function refreshGroupLabels(){
+  const list=document.getElementById('player-list');
+  if(!list) return;
+  // remove existing labels
+  list.querySelectorAll('.group-label').forEach(el=>el.remove());
+  const running=state.players.filter(p=>p.running).length;
+  const done=state.players.filter(p=>!p.running&&p.timeMs>0).length;
+  const waiting=state.players.filter(p=>!p.running&&!p.timeMs).length;
+  const anyActivity=running>0||done>0;
+
+  function makeLabel(text,count,color){
+    const lbl=document.createElement('div');
+    lbl.className='group-label';
+    lbl.style.cssText=`display:flex;align-items:center;gap:7px;padding:6px 4px 2px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${color};`;
+    lbl.innerHTML=`<span>${text}</span><span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;">${count}</span>`;
+    return lbl;
+  }
+
+  // insert labels before the right card groups
+  const allCards=[...list.querySelectorAll('.swipe-item')];
+  if(!allCards.length) return;
+
+  const firstRunning=allCards.find(w=>w.querySelector('.player-card.running'));
+  const firstDone=allCards.find(w=>{const c=w.querySelector('.player-card');return c&&!c.classList.contains('running')&&state.players.find(p=>p.id==c.dataset.pid)?.timeMs>0;});
+  const firstWaiting=allCards.find(w=>{const c=w.querySelector('.player-card');return c&&!c.classList.contains('running')&&!(state.players.find(p=>p.id==c.dataset.pid)?.timeMs>0);});
+
+  if(firstRunning&&running>0) list.insertBefore(makeLabel('⏱ Running',running,'#1a9e5c'),firstRunning);
+  if(firstDone&&done>0) list.insertBefore(makeLabel('✓ Done',done,'#1a73e8'),firstDone);
+  if(firstWaiting&&waiting>0&&anyActivity) list.insertBefore(makeLabel('· Waiting',waiting,'#8e8e93'),firstWaiting);
+}
+
 // ── RENDER: TIMERS ────────────────────────────────────
 function renderTimers(){
   const q=document.getElementById('search-input').value.toLowerCase().trim();
@@ -731,6 +788,7 @@ function renderTimers(){
 
   function addGroupLabel(text, count, color){
     const lbl=document.createElement('div');
+    lbl.className='group-label';
     lbl.style.cssText=`display:flex;align-items:center;gap:7px;padding:6px 4px 2px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;color:${color};`;
     lbl.innerHTML=`<span>${text}</span><span style="background:${color};color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;">${count}</span>`;
     list.appendChild(lbl);
@@ -1114,10 +1172,16 @@ function toast(msg,type=''){
 }
 
 // ── LOOP ──────────────────────────────────────────────
-setInterval(()=>{
+let _lastTick=0;
+function tick(ts){
+  requestAnimationFrame(tick);
   if(_swipeActive) return;
-  if(state.view==='timers'){
-    // update only the time displays in-place — no DOM rebuild
+  if(ts-_lastTick < 100) return;
+  _lastTick=ts;
+
+  // Check DOM directly — don't rely on state.view string
+  const timerView=document.getElementById('view-timers');
+  if(timerView&&timerView.classList.contains('active')){
     state.players.forEach(p=>{
       if(!p.running) return;
       const card=document.querySelector(`.player-card[data-pid="${p.id}"]`);
@@ -1125,18 +1189,16 @@ setInterval(()=>{
       const timeEl=card.querySelector('.player-time');
       if(timeEl) timeEl.textContent=msToClock(liveMs(p));
     });
-    // update session duration in banner
     const sbDur=document.getElementById('sb-dur');
     if(sbDur&&state.sessionOpen) sbDur.textContent=elapsed();
-    // full re-render only if search changed or no cards exist
-    const list=document.getElementById('player-list');
-    if(!list||!list.querySelector('.player-card')) renderTimers();
-  } else if(state.view==='report'){
-    renderReport();
   }
-},300);
+}
+requestAnimationFrame(tick);
 
 // ── INIT ──────────────────────────────────────────────
+// Clear any stale running state from previous sessions
+state.players.forEach(p=>{ if(p.running){ p.timeMs=0; p.running=false; p.startAt=0; } });
+save();
 renderTimers();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js');
 </script>
